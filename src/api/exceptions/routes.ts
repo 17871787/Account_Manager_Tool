@@ -25,8 +25,8 @@ router.get('/exceptions/pending', async (req: Request, res: Response) => {
 });
 
 router.post('/exceptions/:id/review', async (req: Request, res: Response) => {
-  let params: { id: string };
-  let body: { action: 'approve' | 'reject'; userId: string; helpdeskTicketId?: string };
+  let params: { id: string } | undefined;
+  let body: { action: 'approve' | 'reject'; userId: string; helpdeskTicketId?: string } | undefined;
   try {
     params = z.object({ id: z.string() }).parse(req.params);
     body = z
