@@ -1,12 +1,21 @@
 import { ExceptionRule } from '../exception.engine';
 
+interface RuleContext {
+  expectedRate?: number;
+  actualRate?: number;
+  hoursUsed?: number;
+  budgetTotal?: number;
+  taskCategory?: string;
+  isBillable?: boolean;
+}
+
 describe('ExceptionEngine', () => {
   describe('Exception Rules', () => {
     it('should detect rate mismatches correctly', async () => {
       const rateRule: ExceptionRule = {
         id: 'rate-mismatch',
         name: 'Rate Mismatch Detection',
-        check: async (context: any) => {
+        check: async (context: RuleContext) => {
           const { expectedRate, actualRate } = context;
           if (expectedRate !== actualRate) {
             return {
@@ -20,7 +29,7 @@ describe('ExceptionEngine', () => {
         },
       };
 
-      const context = { expectedRate: 150, actualRate: 100 };
+      const context: RuleContext = { expectedRate: 150, actualRate: 100 };
       const result = await rateRule.check(context);
       expect(result).not.toBeNull();
     });
@@ -29,7 +38,7 @@ describe('ExceptionEngine', () => {
       const budgetRule: ExceptionRule = {
         id: 'budget-breach',
         name: 'Budget Breach Detection',
-        check: async (context: any) => {
+        check: async (context: RuleContext) => {
           const { hoursUsed, budgetTotal } = context;
           const percentage = (hoursUsed / budgetTotal) * 100;
           if (percentage >= 90) {
@@ -44,8 +53,8 @@ describe('ExceptionEngine', () => {
         },
       };
 
-      const overBudget = { hoursUsed: 95, budgetTotal: 100 };
-      const underBudget = { hoursUsed: 80, budgetTotal: 100 };
+      const overBudget: RuleContext = { hoursUsed: 95, budgetTotal: 100 };
+      const underBudget: RuleContext = { hoursUsed: 80, budgetTotal: 100 };
 
       await expect(budgetRule.check(overBudget)).resolves.not.toBeNull();
       await expect(budgetRule.check(underBudget)).resolves.toBeNull();
@@ -55,7 +64,7 @@ describe('ExceptionEngine', () => {
       const conflictRule: ExceptionRule = {
         id: 'billable-conflict',
         name: 'Billable Conflict Detection',
-        check: async (context: any) => {
+        check: async (context: RuleContext) => {
           const { taskCategory, isBillable } = context;
           if (taskCategory === 'non-billable' && isBillable) {
             return {
@@ -77,9 +86,9 @@ describe('ExceptionEngine', () => {
         },
       };
 
-      const conflict1 = { taskCategory: 'non-billable', isBillable: true };
-      const conflict2 = { taskCategory: 'billable', isBillable: false };
-      const noConflict = { taskCategory: 'billable', isBillable: true };
+      const conflict1: RuleContext = { taskCategory: 'non-billable', isBillable: true };
+      const conflict2: RuleContext = { taskCategory: 'billable', isBillable: false };
+      const noConflict: RuleContext = { taskCategory: 'billable', isBillable: true };
 
       await expect(conflictRule.check(conflict1)).resolves.not.toBeNull();
       await expect(conflictRule.check(conflict2)).resolves.not.toBeNull();
