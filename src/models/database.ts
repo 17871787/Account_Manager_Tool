@@ -1,5 +1,6 @@
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 import dotenv from 'dotenv';
+import { logger } from '../utils/logger';
 
 dotenv.config();
 
@@ -28,15 +29,15 @@ export async function query<T extends QueryResultRow>(
   text: string,
   params?: unknown[]
 ): Promise<QueryResult<T>> {
-  const start = Date.now();
-  const currentPool = getPool();
-  const res = params
-    ? await currentPool.query<T>(text, params)
-    : await currentPool.query<T>(text);
-  const duration = Date.now() - start;
-  console.log('Executed query', { text, duration, rows: res.rowCount });
-  return res;
-}
+    const start = Date.now();
+    const currentPool = getPool();
+    const res = params
+      ? await currentPool.query<T>(text, params)
+      : await currentPool.query<T>(text);
+    const duration = Date.now() - start;
+    logger.debug({ text, duration, rows: res.rowCount }, 'Executed query');
+    return res;
+  }
 
 export async function getClient() {
   const client = await getPool().connect();
