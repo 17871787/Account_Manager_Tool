@@ -168,3 +168,118 @@ export interface AuditLog {
   newValue?: any;
   helpdeskTicketId?: string;
 }
+
+export interface TimeEntryRecord {
+  id: string;
+  person_id: string;
+  client_id: string;
+  project_id: string;
+  task_id: string;
+  billable_rate: number;
+  billable_flag: boolean;
+  cost_rate: number;
+  cost_amount: number;
+  hours: number;
+  date: Date;
+  task_name?: string;
+  task_category?: string;
+  person_name?: string;
+}
+
+export interface RatePolicyRecord {
+  rate: number;
+}
+
+export interface HarvestProject {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
+export interface HarvestClient {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
+export interface HarvestTask {
+  id: string;
+  name: string;
+  billable_by_default: boolean;
+  is_active: boolean;
+}
+
+export interface HarvestUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+}
+
+export interface HarvestProjectBudget {
+  budget: number;
+  budgetBy: string;
+  budgetIsMonthly: boolean;
+}
+
+export interface HarvestAPITimeEntry {
+  id: number;
+  spent_date: string;
+  client?: { name: string };
+  project?: { name: string };
+  task?: { name: string };
+  notes?: string;
+  hours: number;
+  billable: boolean;
+  is_locked: boolean;
+  user?: { first_name: string; last_name: string };
+  user_assignment?: { role: string };
+  billable_rate?: number;
+  cost_rate?: number;
+  external_reference?: { id: string };
+}
+
+export interface HubSpotDeal {
+  id: string;
+  properties: {
+    dealname: string;
+    amount: string;
+    closedate: string;
+    dealstage: string;
+    pipeline: string;
+    hs_arr: string;
+    hs_mrr: string;
+    hs_tcv: string;
+    hs_acv: string;
+  };
+}
+
+export interface HubSpotCompany {
+  id: string;
+  properties: {
+    name: string;
+    domain: string;
+    industry: string;
+    annualrevenue: string;
+    numberofemployees: string;
+    lifecyclestage: string;
+  };
+}
+
+export interface HubSpotAssociation {
+  id: string;
+}
+
+export interface RevenueMetrics {
+  companyName: string;
+  annualRevenue: number;
+  closedRevenue: number;
+  pipelineValue: number;
+  dealCount: number;
+  closedDealCount: number;
+}
+
+export interface SyncResult {
+  success: boolean;
+  recordsProcessed: number;
+}

@@ -164,7 +164,7 @@ router.post('/profitability/calculate', async (req: Request, res: Response) => {
 router.get('/profitability/portfolio/:month', async (req: Request, res: Response) => {
   try {
     const metrics = await profitabilityService.getPortfolioProfitability(
-      new Date(req.params.month)
+      new Date(req.params.month!)
     );
     res.json(metrics);
   } catch (error) {
@@ -177,10 +177,10 @@ router.get('/profitability/portfolio/:month', async (req: Request, res: Response
 router.get('/profitability/trend/:clientId', async (req: Request, res: Response) => {
   try {
     const { months = 6 } = req.query;
-    const trend = await profitabilityService.getClientProfitabilityTrend(
-      req.params.clientId,
-      Number(months)
-    );
+      const trend = await profitabilityService.getClientProfitabilityTrend(
+        req.params.clientId!,
+        Number(months)
+      );
     res.json(trend);
   } catch (error) {
     console.error('Trend error:', error);
@@ -209,12 +209,12 @@ router.post('/exceptions/:id/review', async (req: Request, res: Response) => {
     
     if (action === 'approve') {
       await exceptionEngine.approveException(
-        req.params.id,
+        req.params.id!,
         userId,
         helpdeskTicketId
       );
     } else if (action === 'reject') {
-      await exceptionEngine.rejectException(req.params.id, userId);
+      await exceptionEngine.rejectException(req.params.id!, userId);
     } else {
       return res.status(400).json({ error: 'Invalid action' });
     }
@@ -262,10 +262,10 @@ router.post('/export/csv', async (req: Request, res: Response) => {
 router.get('/budget/:projectId', async (req: Request, res: Response) => {
   try {
     const { month = new Date() } = req.query;
-    const budgetData = await exportService.getBudgetVsBurn(
-      req.params.projectId,
-      new Date(month as string)
-    );
+      const budgetData = await exportService.getBudgetVsBurn(
+        req.params.projectId!,
+        new Date(month as string)
+      );
     res.json(budgetData);
   } catch (error) {
     console.error('Budget error:', error);
@@ -277,10 +277,10 @@ router.get('/budget/:projectId', async (req: Request, res: Response) => {
 router.get('/report/monthly/:clientId', async (req: Request, res: Response) => {
   try {
     const { month = new Date() } = req.query;
-    const report = await exportService.getMonthlyReport(
-      req.params.clientId,
-      new Date(month as string)
-    );
+      const report = await exportService.getMonthlyReport(
+        req.params.clientId!,
+        new Date(month as string)
+      );
     res.json(report);
   } catch (error) {
     console.error('Report error:', error);
@@ -302,10 +302,10 @@ router.get('/clients', async (req: Request, res: Response) => {
 // Projects endpoints
 router.get('/projects/:clientId', async (req: Request, res: Response) => {
   try {
-    const result = await query(
-      'SELECT * FROM projects WHERE client_id = $1 AND is_active = true ORDER BY name',
-      [req.params.clientId]
-    );
+      const result = await query(
+        'SELECT * FROM projects WHERE client_id = $1 AND is_active = true ORDER BY name',
+        [req.params.clientId!]
+      );
     res.json(result.rows);
   } catch (error) {
     console.error('Projects error:', error);

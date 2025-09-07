@@ -53,7 +53,11 @@ export class ProfitabilityService {
     );
 
     const { billable_cost, exclusion_cost, exception_count } =
-      timeEntriesResult.rows[0];
+      timeEntriesResult.rows[0] || {
+        billable_cost: '0',
+        exclusion_cost: '0',
+        exception_count: '0',
+      };
 
     // Get recognised revenue
     const revenueResult = await query<RevenueRow>(
@@ -85,7 +89,8 @@ export class ProfitabilityService {
       [clientId, projectId]
     );
 
-    const { client_name, project_name } = namesResult.rows[0];
+    const { client_name, project_name } =
+      namesResult.rows[0] || { client_name: '', project_name: '' };
 
     const metric: ProfitabilityMetric = {
       month: monthStr,
