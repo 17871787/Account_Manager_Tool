@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "esnext",
     "lib": [
       "ES2022",
       "DOM"
     ],
     "jsx": "preserve",
-    "outDir": "./dist",
-    "rootDir": "./",
+    "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,14 +17,13 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "types": [
       "node",
       "jest"
     ],
     "allowJs": true,
-    "noEmit": true,
     "incremental": true,
     "isolatedModules": true,
     "plugins": [
@@ -34,9 +33,7 @@
     ]
   },
   "include": [
-    "api/**/*.ts",
-    "src/**/*.ts",
-    ".next/types/**/*.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
@@ -44,6 +41,7 @@
     "tests",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "**/__tests__/**"
+    "**/__tests__/**",
+    ".next"
   ]
 }
