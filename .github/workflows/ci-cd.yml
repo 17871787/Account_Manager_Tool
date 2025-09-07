@@ -51,7 +51,7 @@ jobs:
       - name: Build API
         run: npm run build:api
 
-      - name: Build application
+      - name: Build application and API
         run: npm run build
 
 #  Lighthouse CI Testing (disabled until credentials are configured)
