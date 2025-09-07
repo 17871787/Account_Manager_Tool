@@ -1,5 +1,5 @@
 import { ProfitabilityService } from '../profitability.service';
-import { pool } from '../../models/database';
+import * as db from '../../models/database';
 
 describe('ProfitabilityService', () => {
   let service: ProfitabilityService;
@@ -7,7 +7,7 @@ describe('ProfitabilityService', () => {
 
   beforeEach(() => {
     service = new ProfitabilityService();
-    querySpy = jest.spyOn(pool, 'query');
+    querySpy = jest.spyOn(db, 'query');
   });
 
   afterEach(() => {

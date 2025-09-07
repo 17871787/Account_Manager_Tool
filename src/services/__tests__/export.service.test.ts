@@ -1,13 +1,13 @@
 import { ExportService } from '../export.service';
 import { InvoiceExport } from '../../types';
-import { pool } from '../../models/database';
+import * as db from '../../models/database';
 
 describe('ExportService', () => {
   const service = new ExportService();
   let querySpy: jest.SpyInstance;
 
   beforeEach(() => {
-    querySpy = jest.spyOn(pool, 'query');
+    querySpy = jest.spyOn(db, 'query');
   });
 
   afterEach(() => {

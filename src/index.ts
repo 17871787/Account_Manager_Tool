@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import routes from './api/routes';
-import { pool } from './models/database';
+import { getPool } from './models/database';
 import { AppError } from './types';
 
 dotenv.config();
@@ -31,7 +31,7 @@ app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
 async function startServer() {
   try {
     // Test database connection
-    await pool.query('SELECT NOW()');
+    await getPool().query('SELECT NOW()');
     console.log('✅ Database connected successfully');
 
     app.listen(PORT, () => {
@@ -42,7 +42,7 @@ async function startServer() {
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     try {
-      await pool.end();
+      await getPool().end();
     } finally {
       process.exit(1);
     }
@@ -53,7 +53,7 @@ async function startServer() {
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server...');
   try {
-    await pool.end();
+    await getPool().end();
   } finally {
     process.exit(0);
   }
@@ -62,7 +62,7 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   console.log('SIGINT received, closing server...');
   try {
-    await pool.end();
+    await getPool().end();
   } finally {
     process.exit(0);
   }

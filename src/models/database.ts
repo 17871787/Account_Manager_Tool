@@ -3,10 +3,21 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+let pool: Pool | undefined;
+
+export function getPool(connectionString?: string): Pool {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: connectionString || process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    });
+  }
+  return pool;
+}
+
+export function setPool(newPool: Pool) {
+  pool = newPool;
+}
 
 export async function query<T extends QueryResultRow>(text: string): Promise<QueryResult<T>>;
 export async function query<T extends QueryResultRow>(
@@ -18,16 +29,17 @@ export async function query<T extends QueryResultRow>(
   params?: unknown[]
 ): Promise<QueryResult<T>> {
   const start = Date.now();
+  const currentPool = getPool();
   const res = params
-    ? await pool.query<T>(text, params)
-    : await pool.query<T>(text);
+    ? await currentPool.query<T>(text, params)
+    : await currentPool.query<T>(text);
   const duration = Date.now() - start;
   console.log('Executed query', { text, duration, rows: res.rowCount });
   return res;
 }
 
 export async function getClient() {
-  const client = await pool.connect();
+  const client = await getPool().connect();
   const query = client.query.bind(client);
   const release = client.release.bind(client);
   

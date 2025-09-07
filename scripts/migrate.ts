@@ -1,4 +1,4 @@
-import { pool } from '../src/models/database';
+import { getPool } from '../src/models/database';
 import fs from 'fs';
 import path from 'path';
 
@@ -13,7 +13,7 @@ async function runMigration() {
     const schema = fs.readFileSync(schemaPath, 'utf8');
 
     // Execute schema
-    await pool.query(schema);
+    await getPool().query(schema);
 
     console.log('✅ Database schema created successfully');
 
@@ -28,7 +28,7 @@ async function runMigration() {
     exitCode = 1;
   } finally {
     try {
-      await pool.end();
+      await getPool().end();
     } catch (closeError) {
       console.error('❌ Failed to close database pool:', closeError);
       exitCode = 1;
@@ -43,7 +43,7 @@ async function seedDatabase() {
   
   try {
     // Insert sample client
-    await pool.query(`
+    await getPool().query(`
       INSERT INTO clients (name, harvest_id, is_active)
       VALUES 
         ('Arla', 'harvest_arla_001', true),
@@ -53,7 +53,7 @@ async function seedDatabase() {
     `);
     
     // Insert sample tasks
-    await pool.query(`
+    await getPool().query(`
       INSERT INTO tasks (name, default_billable, category, is_active)
       VALUES 
         ('Account Management', true, 'billable', true),

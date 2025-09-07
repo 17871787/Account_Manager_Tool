@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '../../../api/index';
-import { pool } from '../../models/database';
-import { PoolClient } from 'pg';
+import { setPool } from '../../models/database';
+import { Pool, PoolClient } from 'pg';
 
 jest.mock('../../connectors/harvest.connector', () => ({
   HarvestConnector: jest.fn().mockImplementation(() => ({
@@ -30,6 +30,10 @@ const mockClient = {
   release: jest.fn(),
 } as unknown as PoolClient;
 
+const mockPool = {
+  connect: jest.fn(),
+} as unknown as Pool;
+
 describe('API endpoints', () => {
   let connectSpy: jest.SpyInstance;
 
@@ -37,7 +41,8 @@ describe('API endpoints', () => {
     jest.clearAllMocks();
     mockClient.query.mockReset().mockResolvedValue({ rows: [] });
     mockClient.release.mockReset();
-    connectSpy = jest.spyOn(pool, 'connect').mockResolvedValue(mockClient);
+    setPool(mockPool as unknown as Pool);
+    connectSpy = jest.spyOn(mockPool, 'connect').mockResolvedValue(mockClient);
   });
 
   afterEach(() => {
