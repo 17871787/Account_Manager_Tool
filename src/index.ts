@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import routes from './api/routes';
@@ -18,11 +18,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', routes);
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  console.error(err.stack);
+  res.status((err as any).status || 500).json({
     error: err.message || 'Internal server error',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
   });
 });
 
