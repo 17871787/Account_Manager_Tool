@@ -20,7 +20,8 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "types": [
-      "node"
+      "node",
+      "jest"
     ],
     "allowJs": true,
     "noEmit": true,

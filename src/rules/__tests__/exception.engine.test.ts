@@ -8,8 +8,8 @@ describe('ExceptionEngine', () => {
         name: 'Rate Mismatch Detection',
         description: 'Expected rate differs from actual',
         evaluate: (context: any) => {
-          const expectedRate = 150;
-          const actualRate = 100;
+          const expectedRate = context.expectedRate;
+          const actualRate = context.actualRate;
           return actualRate !== expectedRate;
         },
         severity: 'high',
