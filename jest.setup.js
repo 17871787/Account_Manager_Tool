@@ -5,3 +5,8 @@ global.console = {
   warn: jest.fn(),
   log: jest.fn(),
 };
+
+afterEach(() => {
+  jest.clearAllMocks();
+});
+

@@ -7,11 +7,11 @@ module.exports = {
     '**/?(*.)+(spec|test).+(ts|tsx|js)'
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: true }],
   },
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
-    'app/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/types/**',
     '!**/node_modules/**',
