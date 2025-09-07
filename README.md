@@ -50,3 +50,7 @@ This tool provides:
 - Exception detection
 - Budget vs burn dashboards
 - Invoice-ready CSV exports
+
+## Testing
+
+Lighthouse CI has been removed during early prototyping. The team plans to revisit Lighthouse once the prototype stabilizes.
