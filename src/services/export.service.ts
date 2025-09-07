@@ -1,8 +1,39 @@
-import { InvoiceExport, InvoiceLine, ExclusionSummary } from '../types';
+import {
+  InvoiceExport,
+  InvoiceLine,
+  ExclusionSummary,
+  BudgetVsBurn,
+  MonthlyReport,
+  ProfitabilityMetric,
+} from '../types';
 import { query } from '../models/database';
 import { format } from 'date-fns';
 import { createObjectCsvStringifier } from 'csv-writer';
 
+interface BudgetVsBurnRow {
+  budget: string | null;
+  budget_hours: string | null;
+  actual_hours: string | null;
+  actual_cost: string | null;
+  month_progress: string;
+}
+
+interface ProjectRow {
+  id: string;
+  name: string;
+}
+
+interface ProfitabilityMetricRow {
+  month: Date;
+  client_name: string;
+  project_name: string;
+  billable_cost: string;
+  exclusion_cost: string;
+  recognised_revenue: string;
+  margin: string;
+  margin_percentage: string;
+  exceptions_count: number;
+}
 export class ExportService {
   async generateInvoiceExport(
     clientId: string,
@@ -163,9 +194,9 @@ Total Cost: £${invoiceExport.exclusionsSummary.totalCost.toFixed(2)}
     return header + records + summary;
   }
 
-  async getBudgetVsBurn(projectId: string, month: Date): Promise<any> {
-    const result = await query(
-      `SELECT 
+  async getBudgetVsBurn(projectId: string, month: Date): Promise<BudgetVsBurn | null> {
+    const result = await query<BudgetVsBurnRow>(
+      `SELECT
         p.budget,
         p.budget_hours,
         COALESCE(SUM(te.hours), 0) as actual_hours,
@@ -183,51 +214,76 @@ Total Cost: £${invoiceExport.exclusionsSummary.totalCost.toFixed(2)}
 
     const data = result.rows[0];
     const monthProgress = parseFloat(data.month_progress) * 100;
-    const hoursUtilization = data.budget_hours ? 
-      (parseFloat(data.actual_hours) / parseFloat(data.budget_hours)) * 100 : 0;
-    const costUtilization = data.budget ? 
-      (parseFloat(data.actual_cost) / parseFloat(data.budget)) * 100 : 0;
+    const hoursUtilization = data.budget_hours
+      ? (parseFloat(data.actual_hours || '0') / parseFloat(data.budget_hours)) * 100
+      : 0;
+    const costUtilization = data.budget
+      ? (parseFloat(data.actual_cost || '0') / parseFloat(data.budget)) * 100
+      : 0;
 
     const burnRate = monthProgress > 0 ? hoursUtilization / monthProgress : 0;
     const forecastToCompletion = burnRate * 100;
 
-    return {
-      budget: parseFloat(data.budget || 0),
-      budgetHours: parseFloat(data.budget_hours || 0),
-      actualHours: parseFloat(data.actual_hours),
-      actualCost: parseFloat(data.actual_cost),
+    const budgetVsBurn: BudgetVsBurn = {
+      budget: parseFloat(data.budget || '0'),
+      budgetHours: parseFloat(data.budget_hours || '0'),
+      actualHours: parseFloat(data.actual_hours || '0'),
+      actualCost: parseFloat(data.actual_cost || '0'),
       monthProgress,
       hoursUtilization,
       costUtilization,
       burnRate,
       forecastToCompletion,
-      status: forecastToCompletion > 100 ? 'over-budget' : 
-              forecastToCompletion > 90 ? 'at-risk' : 'on-track',
+      status:
+        forecastToCompletion > 100
+          ? 'over-budget'
+          : forecastToCompletion > 90
+          ? 'at-risk'
+          : 'on-track',
     };
+
+    return budgetVsBurn;
   }
 
-  async getMonthlyReport(clientId: string, month: Date): Promise<any> {
-    // Get all projects for client
-    const projectsResult = await query(
+  async getMonthlyReport(clientId: string, month: Date): Promise<MonthlyReport> {
+    const projectsResult = await query<ProjectRow>(
       `SELECT id, name FROM projects WHERE client_id = $1 AND is_active = true`,
       [clientId]
     );
 
-    const reports = [];
+    const reports: MonthlyReport['projects'] = [];
     for (const project of projectsResult.rows) {
-      const profitabilityResult = await query(
-        `SELECT * FROM profitability_metrics 
-        WHERE client_id = $1 
-          AND project_id = $2 
-          AND DATE_TRUNC('month', month) = DATE_TRUNC('month', $3::date)`,
+      const profitabilityResult = await query<ProfitabilityMetricRow>(
+        `SELECT pm.*, c.name as client_name, p.name as project_name
+        FROM profitability_metrics pm
+        JOIN clients c ON pm.client_id = c.id
+        JOIN projects p ON pm.project_id = p.id
+        WHERE pm.client_id = $1
+          AND pm.project_id = $2
+          AND DATE_TRUNC('month', pm.month) = DATE_TRUNC('month', $3::date)`,
         [clientId, project.id, month]
       );
+
+      const profitRow = profitabilityResult.rows[0];
+      const profitability: ProfitabilityMetric | undefined = profitRow
+        ? {
+            month: format(profitRow.month, 'yyyy-MM'),
+            client: profitRow.client_name,
+            project: profitRow.project_name,
+            billableCost: parseFloat(profitRow.billable_cost),
+            exclusionCost: parseFloat(profitRow.exclusion_cost),
+            recognisedRevenue: parseFloat(profitRow.recognised_revenue),
+            margin: parseFloat(profitRow.margin),
+            marginPercentage: parseFloat(profitRow.margin_percentage),
+            exceptionsCount: profitRow.exceptions_count,
+          }
+        : undefined;
 
       const budgetVsBurn = await this.getBudgetVsBurn(project.id, month);
 
       reports.push({
         projectName: project.name,
-        profitability: profitabilityResult.rows[0],
+        profitability,
         budgetVsBurn,
       });
     }
