@@ -200,6 +200,7 @@ export class ExceptionEngine {
             description: exception.description,
             suggestedAction: exception.suggestedAction,
             ...(exception.metadata ? { metadata: exception.metadata } : {}),
+            createdAt: new Date(),
             status: 'pending',
           });
         }
