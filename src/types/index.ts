@@ -172,3 +172,29 @@ export interface AuditLog {
   newValue?: any;
   helpdeskTicketId?: string;
 }
+
+export interface BudgetVsBurn {
+  budget: number;
+  budgetHours: number;
+  actualHours: number;
+  actualCost: number;
+  monthProgress: number;
+  hoursUtilization: number;
+  costUtilization: number;
+  burnRate: number;
+  forecastToCompletion: number;
+  status: 'over-budget' | 'at-risk' | 'on-track';
+}
+
+export interface MonthlyReportProject {
+  projectName: string;
+  profitability?: ProfitabilityMetric;
+  budgetVsBurn?: BudgetVsBurn | null;
+}
+
+export interface MonthlyReport {
+  clientId: string;
+  month: string;
+  projects: MonthlyReportProject[];
+  generatedAt: Date;
+}
