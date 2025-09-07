@@ -3,14 +3,35 @@ import { SFTRevenue } from '../types';
 
 export class SFTConnector {
   private accessToken: string | null = null;
+  private tenantId: string;
+  private clientId: string;
+  private clientSecret: string;
+
+  constructor() {
+    this.tenantId = process.env.MS_TENANT_ID || '';
+    this.clientId = process.env.MS_CLIENT_ID || '';
+    this.clientSecret = process.env.MS_CLIENT_SECRET || '';
+
+    if (!this.tenantId) {
+      throw new Error('MS_TENANT_ID is not set');
+    }
+
+    if (!this.clientId) {
+      throw new Error('MS_CLIENT_ID is not set');
+    }
+
+    if (!this.clientSecret) {
+      throw new Error('MS_CLIENT_SECRET is not set');
+    }
+  }
 
   async authenticate(): Promise<void> {
     try {
       const response = await axios.post(
-        `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`,
+        `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`,
         new URLSearchParams({
-          client_id: process.env.MS_CLIENT_ID || '',
-          client_secret: process.env.MS_CLIENT_SECRET || '',
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
           scope: 'https://graph.microsoft.com/.default',
           grant_type: 'client_credentials',
         }),

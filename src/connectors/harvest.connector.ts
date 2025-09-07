@@ -14,13 +14,24 @@ export class HarvestConnector {
   private accountId: string;
 
   constructor() {
-    this.accountId = process.env.HARVEST_ACCOUNT_ID || '';
-    
+    const accessToken = process.env.HARVEST_ACCESS_TOKEN;
+    const accountId = process.env.HARVEST_ACCOUNT_ID;
+
+    if (!accessToken) {
+      throw new Error('HARVEST_ACCESS_TOKEN is not set');
+    }
+
+    if (!accountId) {
+      throw new Error('HARVEST_ACCOUNT_ID is not set');
+    }
+
+    this.accountId = accountId;
+
     this.client = axios.create({
       baseURL: 'https://api.harvestapp.com/v2',
       headers: {
         'Harvest-Account-Id': this.accountId,
-        'Authorization': `Bearer ${process.env.HARVEST_ACCESS_TOKEN}`,
+        'Authorization': `Bearer ${accessToken}`,
         'User-Agent': 'MoA AM Copilot',
       },
     });
