@@ -1,5 +1,5 @@
 // Jest setup file for additional configurations
-import '@testing-library/jest-dom';
+require('@testing-library/jest-dom');
 
 global.console = {
   ...console,
