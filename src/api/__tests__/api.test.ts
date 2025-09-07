@@ -1,29 +1,8 @@
 import request from 'supertest';
-import app from '../../app';
+import express from 'express';
+import createApiRouter from '../routes';
 import { setPool } from '../../models/database';
 import { Pool, PoolClient } from 'pg';
-
-jest.mock('../../connectors/harvest.connector', () => ({
-  HarvestConnector: jest.fn().mockImplementation(() => ({
-    getTimeEntries: jest.fn().mockResolvedValue([
-      { entryId: '1', date: new Date(), hours: 1, billableFlag: true, notes: 'test' },
-    ]),
-  })),
-}));
-
-jest.mock('../../connectors/hubspot.connector', () => ({
-  HubSpotConnector: jest.fn().mockImplementation(() => ({
-    syncRevenueData: jest.fn().mockResolvedValue({ success: true, recordsProcessed: 2 }),
-  })),
-}));
-
-jest.mock('../../connectors/sft.connector', () => ({
-  SFTConnector: jest.fn().mockImplementation(() => ({
-    getMonthlyRevenue: jest.fn().mockResolvedValue([
-      { month: '2024-01', recognisedRevenue: 100 },
-    ]),
-  })),
-}));
 
 const mockClient = {
   query: jest.fn(),
@@ -36,6 +15,10 @@ const mockPool = {
 
 describe('API endpoints', () => {
   let connectSpy: jest.SpyInstance;
+  let app: express.Express;
+  let harvestConnector: any;
+  let hubspotConnector: any;
+  let sftConnector: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -43,6 +26,27 @@ describe('API endpoints', () => {
     mockClient.release.mockReset();
     setPool(mockPool as unknown as Pool);
     connectSpy = jest.spyOn(mockPool, 'connect').mockResolvedValue(mockClient);
+
+    harvestConnector = {
+      getTimeEntries: jest.fn().mockResolvedValue([
+        { entryId: '1', date: new Date(), hours: 1, billableFlag: true, notes: 'test' }
+      ])
+    } as any;
+    hubspotConnector = {
+      syncRevenueData: jest.fn().mockResolvedValue({ success: true, recordsProcessed: 2 })
+    } as any;
+    sftConnector = {
+      getMonthlyRevenue: jest.fn().mockResolvedValue([
+        { month: '2024-01', recognisedRevenue: 100 }
+      ])
+    } as any;
+
+    app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      createApiRouter({ harvestConnector, hubspotConnector, sftConnector })
+    );
   });
 
   afterEach(() => {
