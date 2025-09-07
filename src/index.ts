@@ -1,33 +1,11 @@
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
-import routes from './api/routes';
+import app from './server/app';
 import { pool } from './models/database';
-import { AppError } from './types';
 
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// API routes
-app.use('/api', routes);
-
-// Error handling middleware
-app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err);
-  res.status(err.status ?? 500).json({
-    error: err.message || 'Internal server error',
-    timestamp: new Date(),
-  });
-});
-
-// Start server
 async function startServer() {
   try {
     // Test database connection
@@ -49,7 +27,6 @@ async function startServer() {
   }
 }
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server...');
   try {
@@ -69,3 +46,4 @@ process.on('SIGINT', async () => {
 });
 
 startServer();
+
