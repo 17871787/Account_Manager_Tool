@@ -1,46 +1,47 @@
 import { ProfitabilityService } from '../profitability.service';
-import { query } from '../../models/database';
-
-// Mock the database module
-jest.mock('../../models/database');
+import { pool } from '../../models/database';
 
 describe('ProfitabilityService', () => {
   let service: ProfitabilityService;
-  
+  let querySpy: jest.SpyInstance;
+
   beforeEach(() => {
     service = new ProfitabilityService();
-    jest.clearAllMocks();
+    querySpy = jest.spyOn(pool, 'query');
+  });
+
+  afterEach(() => {
+    querySpy.mockRestore();
   });
 
   describe('calculateProfitability', () => {
     it('should calculate profitability correctly', async () => {
-      // Mock database responses
-      (query as jest.Mock).mockImplementation((sql: string) => {
+      querySpy.mockImplementation((sql: string) => {
         if (sql.includes('time_entries')) {
-          return {
+          return Promise.resolve({
             rows: [{
               billable_cost: '50000',
               exclusion_cost: '10000',
               exception_count: '2'
             }]
-          };
+          });
         }
         if (sql.includes('sft_revenue')) {
-          return {
+          return Promise.resolve({
             rows: [{
               recognised_revenue: 100000
             }]
-          };
+          });
         }
         if (sql.includes('clients')) {
-          return {
+          return Promise.resolve({
             rows: [{
               client_name: 'Test Client',
               project_name: 'Test Project'
             }]
-          };
+          });
         }
-        return { rows: [] };
+        return Promise.resolve({ rows: [] });
       });
 
       const result = await service.calculateProfitability(
@@ -63,7 +64,7 @@ describe('ProfitabilityService', () => {
     });
 
     it('should handle zero revenue gracefully', async () => {
-      (query as jest.Mock).mockImplementation(() => ({
+      querySpy.mockImplementation(() => Promise.resolve({
         rows: [{
           billable_cost: '10000',
           exclusion_cost: '5000',
@@ -87,7 +88,7 @@ describe('ProfitabilityService', () => {
 
   describe('backTestAccuracy', () => {
     it('should validate margin within tolerance', async () => {
-      (query as jest.Mock).mockImplementation(() => ({
+      querySpy.mockImplementation(() => Promise.resolve({
         rows: [{
           billable_cost: '60000',
           exclusion_cost: '0',

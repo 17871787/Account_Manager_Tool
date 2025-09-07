@@ -1,21 +1,21 @@
 import { ExportService } from '../export.service';
 import { InvoiceExport } from '../../types';
-import { query } from '../../models/database';
-
-jest.mock('../../models/database', () => ({
-  query: jest.fn(),
-}));
+import { pool } from '../../models/database';
 
 describe('ExportService', () => {
   const service = new ExportService();
-  const mockQuery = query as jest.Mock;
+  let querySpy: jest.SpyInstance;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    querySpy = jest.spyOn(pool, 'query');
+  });
+
+  afterEach(() => {
+    querySpy.mockRestore();
   });
 
   it('generateInvoiceExport builds invoice data', async () => {
-    mockQuery
+    querySpy
       .mockResolvedValueOnce({ rows: [{ task_name: 'Design', total_hours: '5', avg_rate: '50', total_amount: '250', notes: 'Work' }] })
       .mockResolvedValueOnce({ rows: [{ task_name: 'Internal', total_hours: '2', total_cost: '100' }] })
       .mockResolvedValueOnce({ rows: [{ has_subscription_coverage: true }] })
@@ -38,7 +38,21 @@ describe('ExportService', () => {
       amount: 250,
       notes: 'Work',
     });
-    expect(mockQuery).toHaveBeenCalledTimes(5);
+    expect(querySpy).toHaveBeenCalledTimes(5);
+  });
+
+  it('throws on database error', async () => {
+    querySpy.mockRejectedValueOnce(new Error('db fail'));
+
+    await expect(
+      service.generateInvoiceExport(
+        'c1',
+        'p1',
+        new Date('2023-01-01'),
+        new Date('2023-01-31'),
+        'user1'
+      )
+    ).rejects.toThrow('db fail');
   });
 
   it('exportToCSV includes summary information', async () => {

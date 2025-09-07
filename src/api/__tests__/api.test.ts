@@ -1,5 +1,7 @@
 import request from 'supertest';
 import app from '../../../api/index';
+import { pool } from '../../models/database';
+import { PoolClient } from 'pg';
 
 jest.mock('../../connectors/harvest.connector', () => ({
   HarvestConnector: jest.fn().mockImplementation(() => ({
@@ -24,18 +26,22 @@ jest.mock('../../connectors/sft.connector', () => ({
 }));
 
 const mockClient = {
-  query: jest.fn().mockResolvedValue({}),
-  release: jest.fn(),
-};
-
-jest.mock('../../models/database', () => ({
-  getClient: jest.fn().mockResolvedValue(mockClient),
   query: jest.fn(),
-}));
+  release: jest.fn(),
+} as unknown as PoolClient;
 
 describe('API endpoints', () => {
+  let connectSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockClient.query.mockReset().mockResolvedValue({ rows: [] });
+    mockClient.release.mockReset();
+    connectSpy = jest.spyOn(pool, 'connect').mockResolvedValue(mockClient);
+  });
+
+  afterEach(() => {
+    connectSpy.mockRestore();
   });
 
   it('responds to health check', async () => {
@@ -71,5 +77,21 @@ describe('API endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body.source).toBe('sft');
     expect(res.body.recordsProcessed).toBe(1);
+  });
+
+  it('handles database errors during Harvest sync', async () => {
+    mockClient.query.mockRejectedValueOnce(new Error('db fail')).mockResolvedValue({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/sync/harvest')
+      .send({
+        fromDate: new Date().toISOString(),
+        toDate: new Date().toISOString(),
+        clientId: '1',
+      });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('Failed to sync Harvest data');
+    expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
   });
 });
