@@ -1,4 +1,5 @@
 import { Exception } from '../types';
+import { QueryResultRow } from 'pg';
 import { query } from '../models/database';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -192,7 +193,7 @@ export class ExceptionEngine {
     });
   }
 
-  async detectExceptions(entries: any[]): Promise<Exception[]> {
+  async detectExceptions(entries: QueryResultRow[]): Promise<Exception[]> {
     const exceptions: Exception[] = [];
 
     for (const entry of entries) {
@@ -298,7 +299,7 @@ export class ExceptionEngine {
       JOIN clients c ON te.client_id = c.id
       WHERE e.status = 'pending'`;
 
-    const params: any[] = [];
+    const params: string[] = [];
     if (clientId) {
       queryText += ' AND te.client_id = $1';
       params.push(clientId);
@@ -306,7 +307,7 @@ export class ExceptionEngine {
 
     queryText += ' ORDER BY e.severity DESC, e.created_at DESC';
 
-    const result = await query(queryText, params);
+    const result = await query<Exception>(queryText, params);
     return result.rows;
   }
 

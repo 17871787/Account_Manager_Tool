@@ -26,7 +26,7 @@ export class HarvestConnector {
     projectId?: string
   ): Promise<HarvestTimeEntry[]> {
     try {
-      const params: any = {
+      const params: Record<string, unknown> = {
         from: format(fromDate, 'yyyy-MM-dd'),
         to: format(toDate, 'yyyy-MM-dd'),
         per_page: 100,
@@ -58,7 +58,7 @@ export class HarvestConnector {
     }
   }
 
-  async getProjects(isActive = true): Promise<any[]> {
+  async getProjects(isActive = true): Promise<unknown[]> {
     try {
       const response = await this.client.get('/projects', {
         params: { is_active: isActive, per_page: 100 },
@@ -70,7 +70,7 @@ export class HarvestConnector {
     }
   }
 
-  async getClients(isActive = true): Promise<any[]> {
+  async getClients(isActive = true): Promise<unknown[]> {
     try {
       const response = await this.client.get('/clients', {
         params: { is_active: isActive, per_page: 100 },
@@ -82,7 +82,7 @@ export class HarvestConnector {
     }
   }
 
-  async getTasks(): Promise<any[]> {
+  async getTasks(): Promise<unknown[]> {
     try {
       const response = await this.client.get('/tasks', {
         params: { per_page: 100 },
@@ -94,7 +94,7 @@ export class HarvestConnector {
     }
   }
 
-  async getUsers(isActive = true): Promise<any[]> {
+  async getUsers(isActive = true): Promise<unknown[]> {
     try {
       const response = await this.client.get('/users', {
         params: { is_active: isActive, per_page: 100 },

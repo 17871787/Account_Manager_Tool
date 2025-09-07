@@ -8,12 +8,19 @@ export const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-export async function query<T extends QueryResultRow = any>(
+export async function query<T extends QueryResultRow>(text: string): Promise<QueryResult<T>>;
+export async function query<T extends QueryResultRow>(
   text: string,
-  params?: any[]
+  params: unknown[]
+): Promise<QueryResult<T>>;
+export async function query<T extends QueryResultRow>(
+  text: string,
+  params?: unknown[]
 ): Promise<QueryResult<T>> {
   const start = Date.now();
-  const res = await pool.query<T>(text, params);
+  const res = params
+    ? await pool.query<T>(text, params)
+    : await pool.query<T>(text);
   const duration = Date.now() - start;
   console.log('Executed query', { text, duration, rows: res.rowCount });
   return res;
