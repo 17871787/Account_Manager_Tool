@@ -1,4 +1,6 @@
 // Jest setup file for additional configurations
+import '@testing-library/jest-dom';
+
 global.console = {
   ...console,
   error: jest.fn(),
