@@ -44,6 +44,7 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
 #  Lighthouse CI Testing (disabled until credentials are configured)
 #  lighthouse:
