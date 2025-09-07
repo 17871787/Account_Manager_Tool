@@ -6,7 +6,7 @@ const withScope = jest.fn((callback: unknown) =>
   (callback as (scope: { setContext: jest.Mock }) => void)({ setContext: jest.fn() })
 );
 
-jest.mock('@sentry/nextjs', () => ({
+jest.mock('@sentry/node', () => ({
   captureException: (...args: unknown[]) => captureException(...args),
   withScope: (...args: unknown[]) => withScope(...args),
 }));
