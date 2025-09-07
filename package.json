@@ -37,6 +37,7 @@
   "dependencies": {
     "@radix-ui/themes": "^3.2.1",
     "@sentry/nextjs": "^8.45.0",
+    "@sentry/node": "^8.45.0",
     "@types/node": "^20.11.0",
     "autoprefixer": "^10.4.21",
     "axios": "^1.6.5",
