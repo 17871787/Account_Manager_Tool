@@ -1,7 +1,7 @@
-import express from 'express';
-import cors from 'cors';
-import * as Sentry from '@sentry/nextjs';
-import routes from '../src/api/routes';
+import express from "express";
+import cors from "cors";
+import * as Sentry from "@sentry/nextjs";
+import routes from "../src/api/routes";
 
 const app = express();
 
@@ -14,55 +14,62 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Root route
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.json({
-    name: 'MoA Account Manager AI',
-    version: '1.0.0',
-    status: 'operational',
+    name: "MoA Account Manager AI",
+    version: "1.0.0",
+    status: "operational",
     endpoints: {
-      health: '/api/health',
+      health: "/api/health",
       sync: {
-        harvest: '/api/sync/harvest',
-        hubspot: '/api/sync/hubspot',
-        sft: '/api/sync/sft'
+        harvest: "/api/sync/harvest",
+        hubspot: "/api/sync/hubspot",
+        sft: "/api/sync/sft",
       },
-      profitability: '/api/profitability/*',
-      exceptions: '/api/exceptions/*',
-      export: '/api/export/*',
-      budget: '/api/budget/*',
-      clients: '/api/clients',
-      projects: '/api/projects/*'
-    }
+      profitability: "/api/profitability/*",
+      exceptions: "/api/exceptions/*",
+      export: "/api/export/*",
+      budget: "/api/budget/*",
+      clients: "/api/clients",
+      projects: "/api/projects/*",
+    },
   });
 });
 
 // API routes
-app.use('/api', routes);
+app.use("/api", routes);
 
 // Sentry v8 doesn't have errorHandler middleware for Express
 // Errors are captured manually below
 
 // Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  
-  // Add error context to Sentry
-  Sentry.withScope((scope) => {
-    scope.setContext('request', {
-      url: req.url,
-      method: req.method,
-      headers: req.headers,
-      query: req.query,
-      body: req.body,
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => {
+    console.error("Error:", err);
+
+    // Add error context to Sentry
+    Sentry.withScope((scope) => {
+      scope.setContext("request", {
+        url: req.url,
+        method: req.method,
+        headers: req.headers,
+        query: req.query,
+        body: req.body,
+      });
+      Sentry.captureException(err);
     });
-    Sentry.captureException(err);
-  });
-  
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    timestamp: new Date(),
-    errorId: res.locals.sentryId, // Include Sentry error ID for tracking
-  });
-});
+
+    res.status(err.status || 500).json({
+      error: err.message || "Internal server error",
+      timestamp: new Date(),
+      errorId: res.locals.sentryId, // Include Sentry error ID for tracking
+    });
+  },
+);
 
 export default app;

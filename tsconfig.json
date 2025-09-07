@@ -2,10 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
+    "lib": ["ES2022", "DOM"],
     "jsx": "preserve",
     "outDir": "./dist",
     "rootDir": "./",
@@ -19,10 +16,7 @@
     "sourceMap": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "types": [
-      "node",
-      "jest"
-    ],
+    "types": ["node", "jest"],
     "allowJs": true,
     "noEmit": true,
     "incremental": true,
@@ -33,11 +27,7 @@
       }
     ]
   },
-  "include": [
-    "api/**/*.ts",
-    "src/**/*.ts",
-    ".next/types/**/*.ts"
-  ],
+  "include": ["api/**/*.ts", "src/**/*.ts", ".next/types/**/*.ts"],
   "exclude": [
     "node_modules",
     "dist",

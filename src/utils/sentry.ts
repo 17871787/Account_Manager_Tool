@@ -1,13 +1,13 @@
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from "@sentry/nextjs";
 
 // Helper to capture exceptions with additional context
 export const captureException = (
   error: Error | unknown,
-  context?: Record<string, any>
+  context?: Record<string, any>,
 ) => {
   Sentry.withScope((scope) => {
     if (context) {
-      scope.setContext('additional', context);
+      scope.setContext("additional", context);
     }
     Sentry.captureException(error);
   });
@@ -16,12 +16,12 @@ export const captureException = (
 // Helper to capture messages with level
 export const captureMessage = (
   message: string,
-  level: Sentry.SeverityLevel = 'info',
-  context?: Record<string, any>
+  level: Sentry.SeverityLevel = "info",
+  context?: Record<string, any>,
 ) => {
   Sentry.withScope((scope) => {
     if (context) {
-      scope.setContext('additional', context);
+      scope.setContext("additional", context);
     }
     Sentry.captureMessage(message, level);
   });
@@ -30,15 +30,15 @@ export const captureMessage = (
 // Helper to track API performance
 export const trackAPIPerformance = async <T>(
   operation: string,
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<T> => {
-  return Sentry.startSpan({ op: 'api', name: operation }, async (span) => {
+  return Sentry.startSpan({ op: "api", name: operation }, async (span) => {
     try {
       const result = await fn();
       span.setStatus({ code: 1 });
       return result;
     } catch (error) {
-      span.setStatus({ code: 2, message: 'internal_error' });
+      span.setStatus({ code: 2, message: "internal_error" });
       throw error;
     }
   });
@@ -63,12 +63,12 @@ export const setUserContext = (user: {
 export const addBreadcrumb = (
   message: string,
   category: string,
-  data?: Record<string, any>
+  data?: Record<string, any>,
 ) => {
   Sentry.addBreadcrumb({
     message,
     category,
-    level: 'info',
+    level: "info",
     data,
     timestamp: Date.now() / 1000,
   });

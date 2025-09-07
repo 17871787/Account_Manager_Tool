@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from "axios";
 
 export interface HubSpotDeal {
   id: string;
@@ -32,59 +32,72 @@ export class HubSpotConnector {
 
   constructor() {
     this.client = axios.create({
-      baseURL: 'https://api.hubapi.com',
+      baseURL: "https://api.hubapi.com",
       headers: {
-        'Authorization': `Bearer ${process.env.HUBSPOT_API_KEY}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.HUBSPOT_API_KEY}`,
+        "Content-Type": "application/json",
       },
     });
   }
 
   async getDeals(limit = 100): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/deals', {
+      const response = await this.client.get("/crm/v3/objects/deals", {
         params: {
           limit,
-          properties: 'dealname,amount,closedate,dealstage,pipeline,hs_arr,hs_mrr,hs_tcv,hs_acv',
+          properties:
+            "dealname,amount,closedate,dealstage,pipeline,hs_arr,hs_mrr,hs_tcv,hs_acv",
         },
       });
       return response.data.results;
     } catch (error) {
-      console.error('Error fetching HubSpot deals:', error);
+      console.error("Error fetching HubSpot deals:", error);
       throw error;
     }
   }
 
   async getCompanies(limit = 100): Promise<HubSpotCompany[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/companies', {
+      const response = await this.client.get("/crm/v3/objects/companies", {
         params: {
           limit,
-          properties: 'name,domain,industry,annualrevenue,numberofemployees,lifecyclestage',
+          properties:
+            "name,domain,industry,annualrevenue,numberofemployees,lifecyclestage",
         },
       });
       return response.data.results;
     } catch (error) {
-      console.error('Error fetching HubSpot companies:', error);
+      console.error("Error fetching HubSpot companies:", error);
       throw error;
     }
   }
 
   async getDealsByCompany(companyId: string): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get(`/crm/v3/objects/companies/${companyId}/associations/deals`);
+      const response = await this.client.get(
+        `/crm/v3/objects/companies/${companyId}/associations/deals`,
+      );
       const dealIds = response.data.results.map((r: any) => r.id);
-      
+
       if (dealIds.length === 0) return [];
-      
-      const dealsResponse = await this.client.post('/crm/v3/objects/deals/batch/read', {
-        inputs: dealIds.map((id: string) => ({ id })),
-        properties: ['dealname', 'amount', 'closedate', 'dealstage', 'pipeline'],
-      });
-      
+
+      const dealsResponse = await this.client.post(
+        "/crm/v3/objects/deals/batch/read",
+        {
+          inputs: dealIds.map((id: string) => ({ id })),
+          properties: [
+            "dealname",
+            "amount",
+            "closedate",
+            "dealstage",
+            "pipeline",
+          ],
+        },
+      );
+
       return dealsResponse.data.results;
     } catch (error) {
-      console.error('Error fetching deals by company:', error);
+      console.error("Error fetching deals by company:", error);
       throw error;
     }
   }
@@ -92,16 +105,23 @@ export class HubSpotConnector {
   async getRevenueMetrics(companyName: string): Promise<any> {
     try {
       // Search for company by name
-      const searchResponse = await this.client.post('/crm/v3/objects/companies/search', {
-        filterGroups: [{
-          filters: [{
-            propertyName: 'name',
-            operator: 'EQ',
-            value: companyName,
-          }],
-        }],
-        properties: ['name', 'annualrevenue'],
-      });
+      const searchResponse = await this.client.post(
+        "/crm/v3/objects/companies/search",
+        {
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: "name",
+                  operator: "EQ",
+                  value: companyName,
+                },
+              ],
+            },
+          ],
+          properties: ["name", "annualrevenue"],
+        },
+      );
 
       if (searchResponse.data.results.length === 0) {
         return null;
@@ -111,13 +131,15 @@ export class HubSpotConnector {
       const deals = await this.getDealsByCompany(company.id);
 
       // Calculate revenue metrics
-      const closedWonDeals = deals.filter(d => d.properties.dealstage === 'closedwon');
+      const closedWonDeals = deals.filter(
+        (d) => d.properties.dealstage === "closedwon",
+      );
       const totalRevenue = closedWonDeals.reduce((sum, deal) => {
         return sum + (parseFloat(deal.properties.amount) || 0);
       }, 0);
 
-      const activeDeals = deals.filter(d => 
-        !['closedwon', 'closedlost'].includes(d.properties.dealstage)
+      const activeDeals = deals.filter(
+        (d) => !["closedwon", "closedlost"].includes(d.properties.dealstage),
       );
       const pipeline = activeDeals.reduce((sum, deal) => {
         return sum + (parseFloat(deal.properties.amount) || 0);
@@ -132,12 +154,15 @@ export class HubSpotConnector {
         closedDealCount: closedWonDeals.length,
       };
     } catch (error) {
-      console.error('Error fetching revenue metrics:', error);
+      console.error("Error fetching revenue metrics:", error);
       return null;
     }
   }
 
-  async syncRevenueData(): Promise<{ success: boolean; recordsProcessed: number }> {
+  async syncRevenueData(): Promise<{
+    success: boolean;
+    recordsProcessed: number;
+  }> {
     try {
       const companies = await this.getCompanies();
       let processed = 0;
@@ -156,7 +181,7 @@ export class HubSpotConnector {
         recordsProcessed: processed,
       };
     } catch (error) {
-      console.error('HubSpot sync failed:', error);
+      console.error("HubSpot sync failed:", error);
       return {
         success: false,
         recordsProcessed: 0,
@@ -166,12 +191,12 @@ export class HubSpotConnector {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.client.get('/crm/v3/objects/companies', {
+      await this.client.get("/crm/v3/objects/companies", {
         params: { limit: 1 },
       });
       return true;
     } catch (error) {
-      console.error('HubSpot connection test failed:', error);
+      console.error("HubSpot connection test failed:", error);
       return false;
     }
   }

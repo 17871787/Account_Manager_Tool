@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import * as Sentry from '@sentry/nextjs';
+import { useState } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 export default function SentryExamplePage() {
-  const [testType, setTestType] = useState<string>('');
+  const [testType, setTestType] = useState<string>("");
 
   const triggerError = () => {
-    throw new Error('Test Sentry Error - Dashboard is working!');
+    throw new Error("Test Sentry Error - Dashboard is working!");
   };
 
   const triggerTypeError = () => {
@@ -16,15 +16,15 @@ export default function SentryExamplePage() {
   };
 
   const triggerAsyncError = async () => {
-    const response = await fetch('/api/non-existent-endpoint');
+    const response = await fetch("/api/non-existent-endpoint");
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`);
     }
   };
 
   const captureMessage = () => {
-    Sentry.captureMessage('Test message from AM Copilot', 'info');
-    setTestType('Message sent to Sentry!');
+    Sentry.captureMessage("Test message from AM Copilot", "info");
+    setTestType("Message sent to Sentry!");
   };
 
   const captureException = () => {
@@ -33,7 +33,7 @@ export default function SentryExamplePage() {
       const result = someUndefinedVariable.property;
     } catch (error) {
       Sentry.captureException(error);
-      setTestType('Exception captured and sent!');
+      setTestType("Exception captured and sent!");
     }
   };
 
@@ -41,9 +41,10 @@ export default function SentryExamplePage() {
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="max-w-2xl rounded-lg bg-white p-8 shadow-lg">
         <h1 className="mb-6 text-3xl font-bold">Sentry Test Page</h1>
-        
+
         <p className="mb-8 text-gray-600">
-          Click any button below to test different types of Sentry error tracking.
+          Click any button below to test different types of Sentry error
+          tracking.
         </p>
 
         <div className="space-y-4">
@@ -127,10 +128,7 @@ export default function SentryExamplePage() {
         </div>
 
         <div className="mt-4 text-center">
-          <a
-            href="/"
-            className="text-blue-600 hover:underline"
-          >
+          <a href="/" className="text-blue-600 hover:underline">
             ← Back to Dashboard
           </a>
         </div>

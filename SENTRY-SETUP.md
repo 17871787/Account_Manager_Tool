@@ -12,6 +12,7 @@
 ## 2. Get Your DSN
 
 After creating the project, you'll get a DSN that looks like:
+
 ```
 https://abc123@o123456.ingest.sentry.io/1234567
 ```
@@ -75,9 +76,9 @@ Add this temporary button to your dashboard:
 Make a request to a non-existent endpoint:
 
 ```typescript
-fetch('/api/test-error')
-  .then(res => res.json())
-  .catch(err => console.error('Expected error:', err));
+fetch("/api/test-error")
+  .then((res) => res.json())
+  .catch((err) => console.error("Expected error:", err));
 ```
 
 ## 7. Features Configured
@@ -112,12 +113,14 @@ Recommended alerts to set up:
 ## 10. Best Practices
 
 ### DO:
+
 - Use `captureException` for handled errors
 - Add user context when user logs in
 - Use breadcrumbs for important actions
 - Set transaction names for API routes
 
 ### DON'T:
+
 - Log sensitive data (passwords, API keys)
 - Capture expected errors (e.g., validation)
 - Leave test errors in production code
@@ -126,6 +129,7 @@ Recommended alerts to set up:
 ## 11. Monitoring Checklist
 
 Weekly review:
+
 - [ ] Check error trends
 - [ ] Review slowest transactions
 - [ ] Investigate error spikes
@@ -135,16 +139,19 @@ Weekly review:
 ## 12. Troubleshooting
 
 **Not seeing errors?**
+
 - Check DSN is correct
 - Verify environment variables in Vercel
 - Check browser console for Sentry initialization
 
 **Too many errors?**
+
 - Filter out expected errors in `beforeSend`
 - Adjust `tracesSampleRate` if needed
 - Use `ignoreErrors` option
 
 **Missing context?**
+
 - Ensure auth token is set for source maps
 - Check that build uploads source maps
 - Verify user context is being set

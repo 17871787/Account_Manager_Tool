@@ -1,6 +1,6 @@
-import { ProfitabilityMetric } from '../types';
-import { query } from '../models/database';
-import { format } from 'date-fns';
+import { ProfitabilityMetric } from "../types";
+import { query } from "../models/database";
+import { format } from "date-fns";
 
 interface CostRow {
   billable_cost: string | null;
@@ -33,10 +33,10 @@ export class ProfitabilityService {
   async calculateProfitability(
     clientId: string,
     projectId: string,
-    month: Date
+    month: Date,
   ): Promise<ProfitabilityMetric> {
-    const monthStr = format(month, 'yyyy-MM');
-    
+    const monthStr = format(month, "yyyy-MM");
+
     // Get time entries for the month
     const timeEntriesResult = await query<CostRow>(
       `SELECT 
@@ -49,7 +49,7 @@ export class ProfitabilityService {
       WHERE te.client_id = $1 
         AND te.project_id = $2 
         AND DATE_TRUNC('month', te.date) = DATE_TRUNC('month', $3::date)`,
-      [clientId, projectId, month]
+      [clientId, projectId, month],
     );
 
     const { billable_cost, exclusion_cost, exception_count } =
@@ -62,19 +62,20 @@ export class ProfitabilityService {
       WHERE client_id = $1 
         AND project_id = $2 
         AND month = DATE_TRUNC('month', $3::date)`,
-      [clientId, projectId, month]
+      [clientId, projectId, month],
     );
 
     const recognisedRevenue = parseFloat(
-      revenueResult.rows[0]?.recognised_revenue ?? '0'
+      revenueResult.rows[0]?.recognised_revenue ?? "0",
     );
 
     // Calculate margin (Q-review formula)
     // Margin = Recognised Revenue - (Billable Service Time Cost + Attributable Exclusion Cost)
     const totalCost =
-      parseFloat(billable_cost ?? '0') + parseFloat(exclusion_cost ?? '0');
+      parseFloat(billable_cost ?? "0") + parseFloat(exclusion_cost ?? "0");
     const margin = recognisedRevenue - totalCost;
-    const marginPercentage = recognisedRevenue > 0 ? (margin / recognisedRevenue) * 100 : 0;
+    const marginPercentage =
+      recognisedRevenue > 0 ? (margin / recognisedRevenue) * 100 : 0;
 
     // Get client and project names
     const namesResult = await query<NameRow>(
@@ -82,7 +83,7 @@ export class ProfitabilityService {
       FROM clients c
       JOIN projects p ON p.client_id = c.id
       WHERE c.id = $1 AND p.id = $2`,
-      [clientId, projectId]
+      [clientId, projectId],
     );
 
     const { client_name, project_name } = namesResult.rows[0];
@@ -91,12 +92,12 @@ export class ProfitabilityService {
       month: monthStr,
       client: client_name,
       project: project_name,
-      billableCost: parseFloat(billable_cost ?? '0'),
-      exclusionCost: parseFloat(exclusion_cost ?? '0'),
+      billableCost: parseFloat(billable_cost ?? "0"),
+      exclusionCost: parseFloat(exclusion_cost ?? "0"),
       recognisedRevenue,
       margin,
       marginPercentage,
-      exceptionsCount: parseInt(exception_count ?? '0', 10),
+      exceptionsCount: parseInt(exception_count ?? "0", 10),
     };
 
     // Store the calculated metric
@@ -109,7 +110,7 @@ export class ProfitabilityService {
     clientId: string,
     projectId: string,
     month: Date,
-    metric: ProfitabilityMetric
+    metric: ProfitabilityMetric,
   ): Promise<void> {
     await query(
       `INSERT INTO profitability_metrics 
@@ -135,7 +136,7 @@ export class ProfitabilityService {
         metric.margin,
         metric.marginPercentage,
         metric.exceptionsCount,
-      ]
+      ],
     );
   }
 
@@ -150,11 +151,11 @@ export class ProfitabilityService {
       JOIN projects p ON pm.project_id = p.id
       WHERE DATE_TRUNC('month', pm.month) = DATE_TRUNC('month', $1::date)
       ORDER BY pm.margin DESC`,
-      [month]
+      [month],
     );
 
-    return result.rows.map(row => ({
-      month: format(row.month, 'yyyy-MM'),
+    return result.rows.map((row) => ({
+      month: format(row.month, "yyyy-MM"),
       client: row.client_name,
       project: row.project_name,
       billableCost: parseFloat(row.billable_cost),
@@ -168,7 +169,7 @@ export class ProfitabilityService {
 
   async getClientProfitabilityTrend(
     clientId: string,
-    months: number = 6
+    months: number = 6,
   ): Promise<ProfitabilityMetric[]> {
     const result = await query<ProfitabilityMetricRow>(
       `SELECT 
@@ -181,11 +182,11 @@ export class ProfitabilityService {
       WHERE pm.client_id = $1
         AND pm.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL $2)
       ORDER BY pm.month DESC`,
-      [clientId, `${months} months`]
+      [clientId, `${months} months`],
     );
 
-    return result.rows.map(row => ({
-      month: format(row.month, 'yyyy-MM'),
+    return result.rows.map((row) => ({
+      month: format(row.month, "yyyy-MM"),
       client: row.client_name,
       project: row.project_name,
       billableCost: parseFloat(row.billable_cost),
@@ -201,11 +202,20 @@ export class ProfitabilityService {
     clientId: string,
     projectId: string,
     month: Date,
-    expectedMargin: number
-  ): Promise<{ variance: number; withinTolerance: boolean; calculatedMargin: number }> {
+    expectedMargin: number,
+  ): Promise<{
+    variance: number;
+    withinTolerance: boolean;
+    calculatedMargin: number;
+  }> {
     // Calculate WITHOUT persisting (read-only for back-testing)
-    const calculated = await this.calculateProfitabilityReadOnly(clientId, projectId, month);
-    const variance = Math.abs(calculated.margin - expectedMargin) / expectedMargin * 100;
+    const calculated = await this.calculateProfitabilityReadOnly(
+      clientId,
+      projectId,
+      month,
+    );
+    const variance =
+      (Math.abs(calculated.margin - expectedMargin) / expectedMargin) * 100;
     const withinTolerance = variance <= 1; // ±1% tolerance
 
     return {
@@ -219,10 +229,10 @@ export class ProfitabilityService {
   private async calculateProfitabilityReadOnly(
     clientId: string,
     projectId: string,
-    month: Date
+    month: Date,
   ): Promise<ProfitabilityMetric> {
-    const monthStr = format(month, 'yyyy-MM');
-    
+    const monthStr = format(month, "yyyy-MM");
+
     // Get cost data
     const costResult = await query<CostRow>(
       `SELECT 
@@ -235,7 +245,7 @@ export class ProfitabilityService {
       WHERE te.client_id = $1 
         AND te.project_id = $2
         AND DATE_TRUNC('month', te.date) = DATE_TRUNC('month', $3::date)`,
-      [clientId, projectId, month]
+      [clientId, projectId, month],
     );
 
     // Get revenue data
@@ -245,7 +255,7 @@ export class ProfitabilityService {
        WHERE client_id = $1 
          AND project_id = $2 
          AND month = DATE_TRUNC('month', $3::date)`,
-      [clientId, projectId, month]
+      [clientId, projectId, month],
     );
 
     // Get names
@@ -253,33 +263,34 @@ export class ProfitabilityService {
       `SELECT c.name as client_name, p.name as project_name
        FROM clients c, projects p
        WHERE c.id = $1 AND p.id = $2`,
-      [clientId, projectId]
+      [clientId, projectId],
     );
 
     const { billable_cost, exclusion_cost, exception_count } =
       costResult.rows[0] || {};
     const recognisedRevenue = parseFloat(
-      revenueResult.rows[0]?.recognised_revenue ?? '0'
+      revenueResult.rows[0]?.recognised_revenue ?? "0",
     );
     const { client_name, project_name } = namesResult.rows[0] || {};
 
     // Calculate margin (Q-review formula)
     const totalCost =
-      parseFloat(billable_cost ?? '0') + parseFloat(exclusion_cost ?? '0');
+      parseFloat(billable_cost ?? "0") + parseFloat(exclusion_cost ?? "0");
     const margin = recognisedRevenue - totalCost;
-    const marginPercentage = recognisedRevenue > 0 ? (margin / recognisedRevenue) * 100 : 0;
+    const marginPercentage =
+      recognisedRevenue > 0 ? (margin / recognisedRevenue) * 100 : 0;
 
     // Return WITHOUT persisting
     return {
       month: monthStr,
-      client: client_name || '',
-      project: project_name || '',
-      billableCost: parseFloat(billable_cost ?? '0'),
-      exclusionCost: parseFloat(exclusion_cost ?? '0'),
+      client: client_name || "",
+      project: project_name || "",
+      billableCost: parseFloat(billable_cost ?? "0"),
+      exclusionCost: parseFloat(exclusion_cost ?? "0"),
       recognisedRevenue,
       margin,
       marginPercentage,
-      exceptionsCount: parseInt(exception_count ?? '0', 10),
+      exceptionsCount: parseInt(exception_count ?? "0", 10),
     };
   }
 }

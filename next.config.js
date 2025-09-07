@@ -34,8 +34,8 @@ const hasSentryEnv =
   process.env.SENTRY_PROJECT;
 
 module.exports = hasSentryEnv
-  ? require('@sentry/nextjs').withSentryConfig(
+  ? require("@sentry/nextjs").withSentryConfig(
       nextConfig,
-      sentryWebpackPluginOptions
+      sentryWebpackPluginOptions,
     )
   : nextConfig;

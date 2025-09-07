@@ -1,11 +1,13 @@
 # CI/CD Pipeline Setup Guide
 
 ## Overview
+
 This project implements a comprehensive CI/CD pipeline with automated testing, code quality checks, and deployment to Vercel.
 
 ## 🚀 Pipeline Components
 
 ### 1. Continuous Integration (CI)
+
 - **Automated Testing**: Unit tests, integration tests
 - **Code Quality**: ESLint, TypeScript checking
 - **Security Scanning**: npm audit, Snyk
@@ -13,6 +15,7 @@ This project implements a comprehensive CI/CD pipeline with automated testing, c
 - **Code Analysis**: SonarCloud/SonarQube
 
 ### 2. Continuous Deployment (CD)
+
 - **Production**: Auto-deploy to Vercel on main branch
 - **Preview**: Deploy PRs to preview environments
 - **Rollback**: Automatic via Vercel dashboard
@@ -44,18 +47,21 @@ DATABASE_URL: PostgreSQL connection string
 ## 📊 Quality Gates
 
 ### Lighthouse CI Thresholds
+
 - Performance: 85%
 - Accessibility: 90%
 - Best Practices: 90%
 - SEO: 90%
 
 ### SonarQube Quality Gates
+
 - Code Coverage: 80%
 - Security Hotspots: 0
 - Code Duplications: <3%
 - Maintainability Rating: A
 
 ### Test Coverage Requirements
+
 - Branches: 70%
 - Functions: 75%
 - Lines: 80%
@@ -66,6 +72,7 @@ DATABASE_URL: PostgreSQL connection string
 Configure in GitHub → Settings → Branches → Add rule:
 
 ### Main Branch Protection
+
 ```yaml
 Branch name pattern: main
 
@@ -91,6 +98,7 @@ Branch name pattern: main
 ## 🔄 Workflow Triggers
 
 The CI/CD pipeline runs on:
+
 - **Push to main**: Full pipeline + production deploy
 - **Push to develop**: CI tests only
 - **Pull Requests**: CI tests + preview deploy
@@ -99,14 +107,17 @@ The CI/CD pipeline runs on:
 ## 📈 Monitoring & Reporting
 
 ### Lighthouse CI Reports
+
 - View at: GitHub Actions → Workflow run → Artifacts
 - Metrics: Core Web Vitals, Performance scores
 
 ### SonarCloud Dashboard
+
 - URL: https://sonarcloud.io/project/overview?id=17871787_Account_Manager_Tool
 - Metrics: Code smells, vulnerabilities, coverage
 
 ### Test Coverage
+
 - Local: `npm test -- --coverage`
 - CI: Automatically uploaded to Codecov
 
@@ -138,16 +149,19 @@ npm run typecheck
 ### Pipeline Failures
 
 1. **Build failures**: Check TypeScript errors
+
    ```bash
    npm run typecheck
    ```
 
 2. **Test failures**: Run tests locally
+
    ```bash
    npm test
    ```
 
 3. **Lighthouse failures**: Check performance
+
    ```bash
    npm run build
    npm run start
@@ -184,6 +198,7 @@ perf: Performance improvements
 ## 📊 Performance Budgets
 
 Defined in `lighthouserc.js`:
+
 - First Contentful Paint: <2s
 - Largest Contentful Paint: <2.5s
 - Total Blocking Time: <300ms
@@ -192,6 +207,7 @@ Defined in `lighthouserc.js`:
 ## 🎯 Integration with ChatGPT/Codex
 
 For code auditing via ChatGPT web app:
+
 1. Pipeline generates reports in Actions artifacts
 2. Download lighthouse-results.zip
 3. Upload to ChatGPT for analysis

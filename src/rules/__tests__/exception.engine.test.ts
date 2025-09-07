@@ -1,19 +1,19 @@
-import { ExceptionRule } from '../exception.engine';
+import { ExceptionRule } from "../exception.engine";
 
-describe('ExceptionEngine', () => {
-  describe('Exception Rules', () => {
-    it('should detect rate mismatches correctly', async () => {
+describe("ExceptionEngine", () => {
+  describe("Exception Rules", () => {
+    it("should detect rate mismatches correctly", async () => {
       const rateRule: ExceptionRule = {
-        id: 'rate-mismatch',
-        name: 'Rate Mismatch Detection',
+        id: "rate-mismatch",
+        name: "Rate Mismatch Detection",
         check: async (context: any) => {
           const { expectedRate, actualRate } = context;
           if (expectedRate !== actualRate) {
             return {
-              type: 'rate-mismatch',
-              severity: 'high',
-              description: 'Expected rate differs from actual',
-              suggestedAction: 'Review and update rate policy',
+              type: "rate-mismatch",
+              severity: "high",
+              description: "Expected rate differs from actual",
+              suggestedAction: "Review and update rate policy",
             };
           }
           return null;
@@ -25,19 +25,19 @@ describe('ExceptionEngine', () => {
       expect(result).not.toBeNull();
     });
 
-    it('should detect budget breaches at 90% threshold', async () => {
+    it("should detect budget breaches at 90% threshold", async () => {
       const budgetRule: ExceptionRule = {
-        id: 'budget-breach',
-        name: 'Budget Breach Detection',
+        id: "budget-breach",
+        name: "Budget Breach Detection",
         check: async (context: any) => {
           const { hoursUsed, budgetTotal } = context;
           const percentage = (hoursUsed / budgetTotal) * 100;
           if (percentage >= 90) {
             return {
-              type: 'budget-breach',
-              severity: 'high',
-              description: 'Project exceeds 90% of budget',
-              suggestedAction: 'Alert PM and review scope',
+              type: "budget-breach",
+              severity: "high",
+              description: "Project exceeds 90% of budget",
+              suggestedAction: "Alert PM and review scope",
             };
           }
           return null;
@@ -51,35 +51,35 @@ describe('ExceptionEngine', () => {
       await expect(budgetRule.check(underBudget)).resolves.toBeNull();
     });
 
-    it('should detect billable/non-billable conflicts', async () => {
+    it("should detect billable/non-billable conflicts", async () => {
       const conflictRule: ExceptionRule = {
-        id: 'billable-conflict',
-        name: 'Billable Conflict Detection',
+        id: "billable-conflict",
+        name: "Billable Conflict Detection",
         check: async (context: any) => {
           const { taskCategory, isBillable } = context;
-          if (taskCategory === 'non-billable' && isBillable) {
+          if (taskCategory === "non-billable" && isBillable) {
             return {
-              type: 'billable-conflict',
-              severity: 'medium',
-              description: 'Task category conflicts with billable flag',
-              suggestedAction: 'Correct task categorization',
+              type: "billable-conflict",
+              severity: "medium",
+              description: "Task category conflicts with billable flag",
+              suggestedAction: "Correct task categorization",
             };
           }
-          if (taskCategory === 'billable' && !isBillable) {
+          if (taskCategory === "billable" && !isBillable) {
             return {
-              type: 'billable-conflict',
-              severity: 'medium',
-              description: 'Task category conflicts with billable flag',
-              suggestedAction: 'Correct task categorization',
+              type: "billable-conflict",
+              severity: "medium",
+              description: "Task category conflicts with billable flag",
+              suggestedAction: "Correct task categorization",
             };
           }
           return null;
         },
       };
 
-      const conflict1 = { taskCategory: 'non-billable', isBillable: true };
-      const conflict2 = { taskCategory: 'billable', isBillable: false };
-      const noConflict = { taskCategory: 'billable', isBillable: true };
+      const conflict1 = { taskCategory: "non-billable", isBillable: true };
+      const conflict2 = { taskCategory: "billable", isBillable: false };
+      const noConflict = { taskCategory: "billable", isBillable: true };
 
       await expect(conflictRule.check(conflict1)).resolves.not.toBeNull();
       await expect(conflictRule.check(conflict2)).resolves.not.toBeNull();
@@ -87,4 +87,3 @@ describe('ExceptionEngine', () => {
     });
   });
 });
-

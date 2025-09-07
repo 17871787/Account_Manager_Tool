@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import * as Sentry from '@sentry/nextjs';
-import { useEffect } from 'react';
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
 
 export default function Error({
   error,
@@ -26,7 +26,7 @@ export default function Error({
         </p>
         <div className="mb-4 rounded bg-gray-100 p-4">
           <p className="text-sm text-gray-700">
-            Error: {error.message || 'Unknown error'}
+            Error: {error.message || "Unknown error"}
           </p>
           {error.digest && (
             <p className="mt-2 text-xs text-gray-500">

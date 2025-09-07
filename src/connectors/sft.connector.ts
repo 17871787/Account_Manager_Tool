@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { SFTRevenue } from '../types';
+import axios from "axios";
+import { SFTRevenue } from "../types";
 
 export class SFTConnector {
   private accessToken: string | null = null;
@@ -9,21 +9,21 @@ export class SFTConnector {
       const response = await axios.post(
         `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`,
         new URLSearchParams({
-          client_id: process.env.MS_CLIENT_ID || '',
-          client_secret: process.env.MS_CLIENT_SECRET || '',
-          scope: 'https://graph.microsoft.com/.default',
-          grant_type: 'client_credentials',
+          client_id: process.env.MS_CLIENT_ID || "",
+          client_secret: process.env.MS_CLIENT_SECRET || "",
+          scope: "https://graph.microsoft.com/.default",
+          grant_type: "client_credentials",
         }),
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            "Content-Type": "application/x-www-form-urlencoded",
           },
-        }
+        },
       );
 
       this.accessToken = response.data.access_token;
     } catch (error) {
-      console.error('SFT authentication failed:', error);
+      console.error("SFT authentication failed:", error);
       throw error;
     }
   }
@@ -31,7 +31,7 @@ export class SFTConnector {
   async getRecognisedRevenue(
     clientName: string,
     projectName: string,
-    month: string
+    month: string,
   ): Promise<SFTRevenue | null> {
     if (!this.accessToken) {
       await this.authenticate();
@@ -62,7 +62,7 @@ export class SFTConnector {
 
       return mockRevenue;
     } catch (error) {
-      console.error('Error fetching SFT revenue:', error);
+      console.error("Error fetching SFT revenue:", error);
       return null;
     }
   }
@@ -76,7 +76,7 @@ export class SFTConnector {
       // Mock implementation - would query actual SharePoint list
       return [];
     } catch (error) {
-      console.error('Error fetching monthly revenue:', error);
+      console.error("Error fetching monthly revenue:", error);
       return [];
     }
   }

@@ -1,6 +1,7 @@
 # 🤖 Codex/AI Assistant Codebase Guide
 
 ## Project Overview
+
 **Name**: MoA Account Manager AI (AM Copilot)  
 **Purpose**: AI-powered profitability and billing management system for Map of Ag  
 **Tech Stack**: Next.js, TypeScript, PostgreSQL, Node.js, Vercel  
@@ -70,6 +71,7 @@ Account_Manager_Tool/
 ## 🔑 Key Components
 
 ### Frontend Components (`app/page.tsx`)
+
 ```typescript
 // Main dashboard with:
 - Profitability charts (Recharts)
@@ -80,6 +82,7 @@ Account_Manager_Tool/
 ```
 
 ### API Endpoints (`src/api/routes.ts`)
+
 ```typescript
 POST /api/sync/harvest     # Sync time entries
 POST /api/sync/hubspot     # Sync CRM data
@@ -91,6 +94,7 @@ GET  /api/budget/:projectId      # Budget vs burn
 ```
 
 ### Data Models (`src/types/index.ts`)
+
 ```typescript
 interface HarvestTimeEntry {
   entryId, date, client, project, task, hours,
@@ -111,12 +115,14 @@ interface Exception {
 ## 🔄 Data Flow
 
 ### 1. **Sync Flow**
+
 ```
 User clicks "Sync Harvest" → API call → HarvestConnector
 → Fetch time entries → Store in PostgreSQL → Update UI
 ```
 
 ### 2. **Profitability Calculation**
+
 ```
 Q-Review Formula: Margin = Revenue - (Billable Cost + Exclusion Cost)
 - Billable Cost: Time marked as billable × cost rate
@@ -125,6 +131,7 @@ Q-Review Formula: Margin = Revenue - (Billable Cost + Exclusion Cost)
 ```
 
 ### 3. **Exception Detection Rules**
+
 ```typescript
 // Automatic detection of:
 - Rate mismatches (expected vs actual)
@@ -137,6 +144,7 @@ Q-Review Formula: Margin = Revenue - (Billable Cost + Exclusion Cost)
 ## 🗄️ Database Schema
 
 ### Core Tables
+
 - `clients` - Customer organizations
 - `projects` - Customer projects
 - `tasks` - Task taxonomy (billable/exclusion/non-billable)
@@ -167,16 +175,19 @@ VERCEL_TOKEN=xxx
 ## 🧪 Testing Strategy
 
 ### Unit Tests (`jest`)
+
 - Location: `src/**/__tests__/`
 - Coverage requirement: 80%
 - Run: `npm test`
 
 ### Integration Tests
+
 - Lighthouse CI: Performance >85%
 - Accessibility: >90%
 - Best Practices: >90%
 
 ### Code Quality (SonarCloud)
+
 - Security hotspots: 0
 - Code duplication: <3%
 - Maintainability: Grade A
@@ -187,9 +198,8 @@ VERCEL_TOKEN=xxx
 Triggers:
   - Push to main → Production deploy
   - Pull request → Preview deploy + tests
-  
-Pipeline:
-  1. Build & TypeScript check
+
+Pipeline: 1. Build & TypeScript check
   2. Run tests (Jest)
   3. Lighthouse CI
   4. SonarCloud analysis
@@ -200,11 +210,13 @@ Pipeline:
 ## 📊 Business Logic
 
 ### Task Categories
+
 - **Billable**: Directly charged to client
 - **Exclusion**: Covered by subscription (not charged but tracked)
 - **Non-billable**: Internal work (not tracked for profitability)
 
 ### Exception Severity
+
 - **High**: Requires immediate action (rate mismatches, budget breach)
 - **Medium**: Review needed (approaching limits)
 - **Low**: Informational (deprecated tasks)
@@ -248,6 +260,7 @@ vercel --prod        # Deploy to production
 ## 🐛 Common Issues & Solutions
 
 ### Issue: Sync failing
+
 ```typescript
 // Check API credentials in .env
 // Verify external service status
@@ -255,6 +268,7 @@ vercel --prod        # Deploy to production
 ```
 
 ### Issue: Profitability calculations wrong
+
 ```typescript
 // Verify Q-review formula implementation
 // Check task category mappings
@@ -262,6 +276,7 @@ vercel --prod        # Deploy to production
 ```
 
 ### Issue: Build failures
+
 ```typescript
 // Run: npm run typecheck
 // Check for missing dependencies
@@ -278,6 +293,7 @@ vercel --prod        # Deploy to production
 ## 🤝 Integration Points
 
 ### For AI Assistants:
+
 1. Use this guide to understand the codebase structure
 2. Reference type definitions in `src/types/index.ts`
 3. Follow existing patterns in `src/services/` for new features
@@ -285,6 +301,7 @@ vercel --prod        # Deploy to production
 5. Use conventional commits for version control
 
 ### Code Style:
+
 - TypeScript with strict mode off (for flexibility)
 - Functional components with hooks
 - Async/await for promises

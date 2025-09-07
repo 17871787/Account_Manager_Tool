@@ -51,7 +51,7 @@ export interface Task {
   name: string;
   harvestId?: string;
   defaultBillable: boolean;
-  category: 'billable' | 'exclusion' | 'non-billable';
+  category: "billable" | "exclusion" | "non-billable";
   isActive: boolean;
 }
 
@@ -90,13 +90,18 @@ export interface ProfitabilityMetric {
 export interface Exception {
   id: string;
   entryId?: string;
-  type: 'rate_mismatch' | 'billable_conflict' | 'budget_breach' | 'deprecated_task' | 'missing_rate';
-  severity: 'high' | 'medium' | 'low';
+  type:
+    | "rate_mismatch"
+    | "billable_conflict"
+    | "budget_breach"
+    | "deprecated_task"
+    | "missing_rate";
+  severity: "high" | "medium" | "low";
   description: string;
   suggestedAction: string;
   entityType: string;
   entityId: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   createdAt: Date;
   reviewedBy?: string;
   reviewedAt?: Date;
@@ -145,7 +150,12 @@ export interface ExclusionSummary {
   }>;
 }
 
-export type UserRole = 'admin' | 'finance' | 'account_manager' | 'ops' | 'leadership';
+export type UserRole =
+  | "admin"
+  | "finance"
+  | "account_manager"
+  | "ops"
+  | "leadership";
 
 export interface User {
   id: string;

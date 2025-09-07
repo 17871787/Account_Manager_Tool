@@ -5,6 +5,7 @@ AI-assisted profitability and billing management system for Map of Ag Account Ma
 ## Overview
 
 This tool provides:
+
 - Live profitability views per customer/project
 - Automated exception detection and workflow
 - Integration with Harvest time tracking and SFT revenue data
