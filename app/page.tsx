@@ -33,7 +33,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-import { mockApiService } from '@/services/mockData';
+import { mockApiService } from '../src/services/mockData';
 
 // Metric Card Component
 function MetricCard({ 
