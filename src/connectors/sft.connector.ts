@@ -1,16 +1,38 @@
 import axios from 'axios';
 import { SFTRevenue } from '../types';
+import { captureException } from '../utils/sentry';
 
 export class SFTConnector {
   private accessToken: string | null = null;
+  private tenantId: string;
+  private clientId: string;
+  private clientSecret: string;
+
+  constructor() {
+    this.tenantId = process.env.MS_TENANT_ID || '';
+    this.clientId = process.env.MS_CLIENT_ID || '';
+    this.clientSecret = process.env.MS_CLIENT_SECRET || '';
+
+    if (!this.tenantId) {
+      throw new Error('MS_TENANT_ID is not set');
+    }
+
+    if (!this.clientId) {
+      throw new Error('MS_CLIENT_ID is not set');
+    }
+
+    if (!this.clientSecret) {
+      throw new Error('MS_CLIENT_SECRET is not set');
+    }
+  }
 
   async authenticate(): Promise<void> {
     try {
       const response = await axios.post(
-        `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`,
+        `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`,
         new URLSearchParams({
-          client_id: process.env.MS_CLIENT_ID || '',
-          client_secret: process.env.MS_CLIENT_SECRET || '',
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
           scope: 'https://graph.microsoft.com/.default',
           grant_type: 'client_credentials',
         }),
@@ -23,7 +45,9 @@ export class SFTConnector {
 
       this.accessToken = response.data.access_token;
     } catch (error) {
-      console.error('SFT authentication failed:', error);
+      captureException(error, {
+        operation: 'SFTConnector.authenticate',
+      });
       throw error;
     }
   }
@@ -62,7 +86,12 @@ export class SFTConnector {
 
       return mockRevenue;
     } catch (error) {
-      console.error('Error fetching SFT revenue:', error);
+      captureException(error, {
+        operation: 'SFTConnector.getRecognisedRevenue',
+        clientName,
+        projectName,
+        month,
+      });
       return null;
     }
   }
@@ -76,7 +105,10 @@ export class SFTConnector {
       // Mock implementation - would query actual SharePoint list
       return [];
     } catch (error) {
-      console.error('Error fetching monthly revenue:', error);
+      captureException(error, {
+        operation: 'SFTConnector.getMonthlyRevenue',
+        month,
+      });
       return [];
     }
   }

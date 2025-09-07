@@ -2,17 +2,41 @@ import { Exception, TimeEntryRecord, RatePolicyRow } from '../types';
 import { query } from '../models/database';
 import { v4 as uuidv4 } from 'uuid';
 
+interface TaskRow {
+  id: string;
+  category: string;
+  default_billable: boolean;
+  is_active: boolean;
+  name: string;
+}
+
+interface RatePolicyFullRow extends RatePolicyRow {
+  person_id: string;
+  client_id: string;
+  effective_from: Date;
+  effective_to: Date | null;
+}
+
+interface BudgetRow {
+  project_id: string;
+  month: Date;
+  budget: number;
+  budget_hours: string;
+  total_hours: string | null;
+  total_cost: string | null;
+}
+
 /**
- * ExceptionEngine processes time-entry records and applies a series of
- * database-backed rules to detect inconsistencies. Each rule performs its own
- * query which keeps the implementation straightforward and easy to extend, but
- * also means that processing large batches of entries can result in a high
- * number of database calls (an "N+1" pattern). Use this engine for smaller
- * workloads or interactive scenarios where clarity and rule isolation are more
- * important than raw throughput.
+ * ExceptionEngine processes time-entry records and applies database-backed
+ * rules to detect inconsistencies. Reference data required by the rules is
+ * loaded in bulk before evaluation to avoid an N+1 query pattern while keeping
+ * individual rule logic isolated and easy to extend.
  */
 export class ExceptionEngine {
   private rules: ExceptionRule[] = [];
+  private taskCache = new Map<string, TaskRow>();
+  private ratePolicyCache = new Map<string, RatePolicyFullRow[]>();
+  private budgetCache = new Map<string, BudgetRow>();
 
   constructor() {
     this.initializeRules();
@@ -24,18 +48,18 @@ export class ExceptionEngine {
       id: 'rate_mismatch',
       name: 'Rate Mismatch Detection',
       check: async (entry: TimeEntryRecord) => {
-        const ratePolicy = await this.getApplicableRate(
+        const ratePolicy = this.getApplicableRateFromCache(
           entry.person_id,
           entry.client_id,
           entry.date
         );
-        
+
         if (!ratePolicy) return null;
 
         const expectedRate = ratePolicy.rate;
         const actualRate = entry.billable_rate;
         const variance = Math.abs(expectedRate - actualRate);
-        
+
         if (variance > 0.01) {
           return {
             type: 'rate_mismatch',
@@ -58,16 +82,11 @@ export class ExceptionEngine {
       id: 'billable_conflict',
       name: 'Billable Flag Conflict',
       check: async (entry: TimeEntryRecord) => {
-        const taskResult = await query(
-          'SELECT category, default_billable FROM tasks WHERE id = $1',
-          [entry.task_id]
-        );
-        
-        if (!taskResult.rows[0]) return null;
-        
-        const task = taskResult.rows[0];
+        const task = this.taskCache.get(entry.task_id);
+        if (!task) return null;
+
         const expectedBillable = task.category === 'billable';
-        
+
         if (entry.billable_flag !== expectedBillable) {
           return {
             type: 'billable_conflict',
@@ -90,39 +109,29 @@ export class ExceptionEngine {
       id: 'budget_breach',
       name: 'Budget Breach Detection',
       check: async (entry: TimeEntryRecord) => {
-        const budgetResult = await query(
-          `SELECT 
-            p.budget,
-            p.budget_hours,
-            SUM(te.hours) as total_hours,
-            SUM(te.cost_amount) as total_cost
-          FROM projects p
-          LEFT JOIN time_entries te ON te.project_id = p.id
-          WHERE p.id = $1
-            AND DATE_TRUNC('month', te.date) = DATE_TRUNC('month', $2::date)
-          GROUP BY p.id, p.budget, p.budget_hours`,
-          [entry.project_id, entry.date]
-        );
-        
-        if (!budgetResult.rows[0]) return null;
-        
-        const budget = budgetResult.rows[0];
-        const utilizationRate = budget.budget_hours ? 
-          (parseFloat(budget.total_hours) / parseFloat(budget.budget_hours)) * 100 : 0;
-        
+        const monthKey = this.getMonthKey(entry.date);
+        const budget = this.budgetCache.get(`${entry.project_id}-${monthKey}`);
+        if (!budget) return null;
+
+        const budgetHours = parseFloat(budget.budget_hours);
+        const totalHours = parseFloat(budget.total_hours ?? '0');
+        const totalCost = parseFloat(budget.total_cost ?? '0');
+        const utilizationRate = budgetHours ? (totalHours / budgetHours) * 100 : 0;
+
         if (utilizationRate > 90) {
           return {
             type: 'budget_breach',
             severity: utilizationRate > 100 ? 'high' : 'medium',
             description: `Budget utilization at ${utilizationRate.toFixed(1)}% for project`,
-            suggestedAction: utilizationRate > 100 ?
-              'Project over budget - review with Finance' :
-              'Approaching budget limit - monitor closely',
+            suggestedAction:
+              utilizationRate > 100
+                ? 'Project over budget - review with Finance'
+                : 'Approaching budget limit - monitor closely',
             metadata: {
               utilizationRate,
-              budgetHours: parseFloat(budget.budget_hours),
-              totalHours: parseFloat(budget.total_hours),
-              totalCost: parseFloat(budget.total_cost),
+              budgetHours,
+              totalHours,
+              totalCost,
             },
           };
         }
@@ -135,14 +144,9 @@ export class ExceptionEngine {
       id: 'deprecated_task',
       name: 'Deprecated Task Usage',
       check: async (entry: TimeEntryRecord) => {
-        const taskResult = await query(
-          'SELECT is_active, name FROM tasks WHERE id = $1',
-          [entry.task_id]
-        );
-        
-        if (!taskResult.rows[0]) return null;
-        
-        const task = taskResult.rows[0];
+        const task = this.taskCache.get(entry.task_id);
+        if (!task) return null;
+
         if (!task.is_active) {
           return {
             type: 'deprecated_task',
@@ -195,6 +199,8 @@ export class ExceptionEngine {
   async detectExceptions(entries: TimeEntryRecord[]): Promise<Exception[]> {
     const exceptions: Exception[] = [];
 
+    await this.preloadReferenceData(entries);
+
     for (const entry of entries) {
       for (const rule of this.rules) {
         const exception = await rule.check(entry);
@@ -216,7 +222,105 @@ export class ExceptionEngine {
       }
     }
 
+    this.taskCache.clear();
+    this.ratePolicyCache.clear();
+    this.budgetCache.clear();
+
     return exceptions;
+  }
+
+  private getMonthKey(date: Date): string {
+    return new Date(date.getFullYear(), date.getMonth(), 1)
+      .toISOString()
+      .split('T')[0];
+  }
+
+  private getApplicableRateFromCache(
+    personId: string,
+    clientId: string,
+    date: Date
+  ): RatePolicyRow | null {
+    const key = `${personId}-${clientId}`;
+    const policies = this.ratePolicyCache.get(key);
+    if (!policies) return null;
+    for (const policy of policies) {
+      const from = new Date(policy.effective_from);
+      const to = policy.effective_to ? new Date(policy.effective_to) : null;
+      if (from <= date && (!to || to >= date)) {
+        return { rate: Number(policy.rate) };
+      }
+    }
+    return null;
+  }
+
+  private async preloadReferenceData(entries: TimeEntryRecord[]) {
+    await this.loadTasks(entries);
+    await this.loadRatePolicies(entries);
+    await this.loadBudgets(entries);
+  }
+
+  private async loadTasks(entries: TimeEntryRecord[]) {
+    const taskIds = Array.from(new Set(entries.map((e) => e.task_id)));
+    if (!taskIds.length) return;
+    const result = await query<TaskRow>(
+      'SELECT id, category, default_billable, is_active, name FROM tasks WHERE id = ANY($1)',
+      [taskIds]
+    );
+    result.rows.forEach((row) => this.taskCache.set(row.id, row));
+  }
+
+  private async loadRatePolicies(entries: TimeEntryRecord[]) {
+    const personIds = Array.from(new Set(entries.map((e) => e.person_id)));
+    const clientIds = Array.from(new Set(entries.map((e) => e.client_id)));
+    if (!personIds.length || !clientIds.length) return;
+    const result = await query<RatePolicyFullRow>(
+      `SELECT person_id, client_id, rate, effective_from, effective_to
+       FROM rate_policies
+       WHERE person_id = ANY($1) AND client_id = ANY($2)`,
+      [personIds, clientIds]
+    );
+    for (const row of result.rows) {
+      const key = `${row.person_id}-${row.client_id}`;
+      const list = this.ratePolicyCache.get(key) || [];
+      list.push({
+        ...row,
+        effective_from: new Date(row.effective_from),
+        effective_to: row.effective_to ? new Date(row.effective_to) : null,
+      });
+      this.ratePolicyCache.set(key, list);
+    }
+    for (const list of this.ratePolicyCache.values()) {
+      list.sort((a, b) => b.effective_from.getTime() - a.effective_from.getTime());
+    }
+  }
+
+  private async loadBudgets(entries: TimeEntryRecord[]) {
+    const projectIds = new Set<string>();
+    const months = new Set<string>();
+    for (const entry of entries) {
+      projectIds.add(entry.project_id);
+      months.add(this.getMonthKey(entry.date));
+    }
+    if (!projectIds.size || !months.size) return;
+    const result = await query<BudgetRow>(
+      `SELECT
+         p.id as project_id,
+         DATE_TRUNC('month', te.date)::date as month,
+         p.budget,
+         p.budget_hours,
+         SUM(te.hours) as total_hours,
+         SUM(te.cost_amount) as total_cost
+       FROM projects p
+       LEFT JOIN time_entries te ON te.project_id = p.id
+       WHERE p.id = ANY($1) AND DATE_TRUNC('month', te.date)::date = ANY($2)
+       GROUP BY p.id, month, p.budget, p.budget_hours`,
+      [Array.from(projectIds), Array.from(months)]
+    );
+    for (const row of result.rows) {
+      const monthKey = new Date(row.month).toISOString().split('T')[0];
+      const key = `${row.project_id}-${monthKey}`;
+      this.budgetCache.set(key, row);
+    }
   }
 
   async processTimeEntry(entryId: string): Promise<Exception[]> {
@@ -260,27 +364,6 @@ export class ExceptionEngine {
         ]
       );
     }
-  }
-
-  async getApplicableRate(
-    personId: string,
-    clientId: string,
-    date: Date
-  ): Promise<RatePolicyRow | null> {
-    const result = await query<RatePolicyRow>(
-      `SELECT rate
-      FROM rate_policies
-      WHERE person_id = $1
-        AND client_id = $2
-        AND effective_from <= $3
-        AND (effective_to IS NULL OR effective_to >= $3)
-      ORDER BY effective_from DESC
-      LIMIT 1`,
-      [personId, clientId, date]
-    );
-
-    if (!result.rows[0]) return null;
-    return { rate: Number(result.rows[0].rate) };
   }
 
   async getPendingExceptions(clientId?: string): Promise<Exception[]> {
