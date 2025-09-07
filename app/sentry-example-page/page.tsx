@@ -29,7 +29,7 @@ export default function SentryExamplePage() {
 
   const captureException = () => {
     try {
-      // @ts-expect-error
+      // @ts-expect-error - Intentionally accessing undefined variable for testing
       const result = someUndefinedVariable.property;
     } catch (error) {
       Sentry.captureException(error);
