@@ -17,52 +17,51 @@ export class ExceptionEngineOptimized {
 
     // Batch fetch all needed data upfront
     const entryIds = entries.map(e => e.entryId);
-    const tasks = [...new Set(entries.map(e => e.task))];
-    const clients = [...new Set(entries.map(e => e.client))];
-    const projects = [...new Set(entries.map(e => e.project))];
-    const personNames = [...new Set(entries.map(e => `${e.firstName} ${e.lastName}`))];
+    const taskIds = [...new Set(entries.map(e => e.task.id))];
+    const clientIds = [...new Set(entries.map(e => e.client.id))];
+    const projectIds = [...new Set(entries.map(e => e.project.id))];
+    const personIds = [...new Set(entries.map(e => e.user.id))];
 
     // Batch queries - ONE query per data type instead of N queries
-    const [taskData, ratePolicies, budgets] = await Promise.all([
-      // Get all tasks at once by name
+    const [tasks, ratePolicies, budgets] = await Promise.all([
+      // Get all tasks at once
       query(
-        `SELECT name, category, default_billable, deprecated 
+        `SELECT id, category, default_billable, deprecated 
          FROM tasks 
-         WHERE name = ANY($1::text[])`,
-        [tasks]
+         WHERE id = ANY($1::text[])`,
+        [taskIds]
       ),
       
       // Get all rate policies at once
       query(
-        `SELECT p.first_name, p.last_name, c.name as client_name, rp.rate, rp.effective_from 
-         FROM rate_policies rp
-         JOIN persons p ON p.id = rp.person_id
-         JOIN clients c ON c.id = rp.client_id
-         WHERE c.name = ANY($1::text[])
-         ORDER BY rp.effective_from DESC`,
-        [clients]
+        `SELECT person_id, client_id, rate, effective_date 
+         FROM rate_policies 
+         WHERE person_id = ANY($1::text[]) 
+         AND client_id = ANY($2::text[])
+         ORDER BY effective_date DESC`,
+        [personIds, clientIds]
       ),
       
       // Get all project budgets at once (with COALESCE for null safety)
       query(
-        `SELECT p.name as project_name, p.budget_hours, 
-         COALESCE(SUM(te.hours), 0) as hours_used 
+        `SELECT project_id, budget_hours, 
+         COALESCE(SUM(hours), 0) as hours_used 
          FROM projects p
-         LEFT JOIN time_entries te ON te.project = p.name
-         WHERE p.name = ANY($1::text[])
-         GROUP BY p.name, p.budget_hours`,
-        [projects]
+         LEFT JOIN time_entries te ON te.project_id = p.id
+         WHERE p.id = ANY($1::text[])
+         GROUP BY p.id, p.budget_hours`,
+        [projectIds]
       )
     ]);
 
     // Create lookup maps for O(1) access
-    const taskMap = new Map(taskData.rows.map(t => [t.name, t]));
+    const taskMap = new Map(tasks.rows.map(t => [t.id, t]));
     const ratePolicyMap = new Map();
-    const budgetMap = new Map(budgets.rows.map(b => [b.project_name, b]));
+    const budgetMap = new Map(budgets.rows.map(b => [b.project_id, b]));
 
     // Build rate policy map with effective dates
     ratePolicies.rows.forEach(rp => {
-      const key = `${rp.first_name} ${rp.last_name}-${rp.client_name}`;
+      const key = `${rp.person_id}-${rp.client_id}`;
       if (!ratePolicyMap.has(key)) {
         ratePolicyMap.set(key, []);
       }
@@ -73,16 +72,16 @@ export class ExceptionEngineOptimized {
     const exceptions: Exception[] = [];
 
     for (const entry of entries) {
-      const task = taskMap.get(entry.task);
-      const ratePolicyKey = `${entry.firstName} ${entry.lastName}-${entry.client}`;
+      const task = taskMap.get(entry.task.id);
+      const ratePolicyKey = `${entry.user.id}-${entry.client.id}`;
       const ratePolicies = ratePolicyMap.get(ratePolicyKey) || [];
-      const budget = budgetMap.get(entry.project);
+      const budget = budgetMap.get(entry.project.id);
 
       // Check rate mismatch
       const applicableRate = this.findApplicableRate(ratePolicies, entry.date);
-      if (applicableRate && applicableRate.rate) {
-        const expectedRate = parseFloat(applicableRate.rate.toString());
-        const actualRate = parseFloat(entry.billableRate.toString());
+      if (applicableRate) {
+        const expectedRate = parseFloat(applicableRate.rate);
+        const actualRate = entry.billableRate;
         const variance = Math.abs(expectedRate - actualRate);
         
         if (variance > 0.01) {
@@ -169,7 +168,7 @@ export class ExceptionEngineOptimized {
             description: `Project at ${utilization.toFixed(1)}% of budget`,
             suggestedAction: utilization >= 100 ? 'Stop work or request budget extension' : 'Alert PM about approaching limit',
             entityType: 'project',
-            entityId: entry.project,
+            entityId: entry.project.id,
             status: 'pending',
             createdAt: new Date(),
             metadata: {
@@ -182,7 +181,7 @@ export class ExceptionEngineOptimized {
       }
 
       // Check missing rate
-      if (!entry.billableRate || parseFloat(entry.billableRate.toString()) === 0) {
+      if (!entry.billableRate || entry.billableRate === 0) {
         exceptions.push({
           id: uuidv4(),
           type: 'missing_rate',
@@ -194,8 +193,8 @@ export class ExceptionEngineOptimized {
           status: 'pending',
           createdAt: new Date(),
           metadata: {
-            person: `${entry.firstName} ${entry.lastName}`,
-            client: entry.client
+            personId: entry.user.id,
+            clientId: entry.client.id
           }
         });
       }
@@ -208,8 +207,8 @@ export class ExceptionEngineOptimized {
   private findApplicableRate(ratePolicies: any[], date: Date): any {
     // Find the most recent rate policy before or on the given date
     return ratePolicies
-      .filter(rp => new Date(rp.effective_from || rp.effective_date) <= date)
-      .sort((a, b) => new Date(b.effective_from || b.effective_date).getTime() - new Date(a.effective_from || a.effective_date).getTime())[0];
+      .filter(rp => new Date(rp.effective_date) <= date)
+      .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0];
   }
 
   private deduplicateExceptions(exceptions: Exception[]): Exception[] {

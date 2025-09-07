@@ -39,8 +39,8 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api', routes);
 
-// Sentry v8 doesn't have errorHandler middleware for Express
-// Errors are captured manually below
+// Sentry error handler (must be before other error handlers)
+app.use(Sentry.expressErrorHandler());
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

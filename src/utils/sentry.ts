@@ -32,23 +32,9 @@ export const trackAPIPerformance = async <T>(
   operation: string,
   fn: () => Promise<T>
 ): Promise<T> => {
-  const transaction = Sentry.startTransaction({
-    op: 'api',
-    name: operation,
+  return Sentry.startSpan({ name: operation, op: 'api' }, async () => {
+    return fn();
   });
-
-  Sentry.getCurrentHub().getScope()?.setSpan(transaction);
-
-  try {
-    const result = await fn();
-    transaction.setStatus('ok');
-    return result;
-  } catch (error) {
-    transaction.setStatus('internal_error');
-    throw error;
-  } finally {
-    transaction.finish();
-  }
 };
 
 // Helper to add user context
