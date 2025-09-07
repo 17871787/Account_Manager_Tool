@@ -8,7 +8,6 @@
     ],
     "jsx": "preserve",
     "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -33,6 +32,9 @@
     ]
   },
   "include": [
+    "next-env.d.ts",
+    "app/**/*.{ts,tsx}",
+    "api/**/*.ts",
     "src/**/*.ts"
   ],
   "exclude": [
