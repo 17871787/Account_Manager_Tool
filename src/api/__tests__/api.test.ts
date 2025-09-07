@@ -72,6 +72,43 @@ describe('API endpoints', () => {
     expect(res.body.entriesProcessed).toBe(1);
   });
 
+  it('chunks Harvest inserts to avoid parameter limit', async () => {
+    const entries = Array.from({ length: 2500 }).map((_, i) => ({
+      entryId: `${i}`,
+      date: new Date(),
+      hours: 1,
+      billableFlag: true,
+      notes: 'test',
+    }));
+
+    harvestConnector.getTimeEntries.mockResolvedValue(entries);
+
+    const res = await request(app)
+      .post('/api/sync/harvest')
+      .send({
+        fromDate: new Date().toISOString(),
+        toDate: new Date().toISOString(),
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.entriesProcessed).toBe(entries.length);
+
+    const insertCalls = mockClient.query.mock.calls.filter(
+      ([query]) => typeof query === 'string' && query.includes('INSERT INTO time_entries')
+    );
+
+    expect(insertCalls).toHaveLength(Math.ceil(entries.length / 1000));
+
+    insertCalls.forEach((call, index) => {
+      const params = call[1] as unknown[];
+      const expectedLength =
+        index < Math.floor(entries.length / 1000)
+          ? 1000 * 5
+          : (entries.length % 1000) * 5;
+      expect(params).toHaveLength(expectedLength);
+    });
+  });
+
   it('syncs HubSpot data', async () => {
     const res = await request(app).post('/api/sync/hubspot');
     expect(res.status).toBe(200);

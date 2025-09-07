@@ -43,23 +43,29 @@ export default function createSyncRouter({
       await client.query('BEGIN');
 
       if (entries.length) {
-        const values: string[] = [];
-        const params: Array<string | number | Date | boolean | null> = [];
-        entries.forEach((entry, index) => {
-          const base = index * 5;
-          values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
-          params.push(entry.entryId, entry.date, entry.hours, entry.billableFlag, entry.notes);
-        });
+        const CHUNK_SIZE = 1000;
 
-        const insertQuery = `
-          INSERT INTO time_entries (harvest_entry_id, date, hours, billable_flag, notes)
-          VALUES ${values.join(',')}
-          ON CONFLICT (harvest_entry_id) DO UPDATE SET
-            hours = EXCLUDED.hours,
-            billable_flag = EXCLUDED.billable_flag,
-            notes = EXCLUDED.notes;
-        `;
-        await client.query(insertQuery, params);
+        for (let start = 0; start < entries.length; start += CHUNK_SIZE) {
+          const chunk = entries.slice(start, start + CHUNK_SIZE);
+          const values: string[] = [];
+          const params: Array<string | number | Date | boolean | null> = [];
+
+          chunk.forEach((entry, index) => {
+            const base = index * 5;
+            values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
+            params.push(entry.entryId, entry.date, entry.hours, entry.billableFlag, entry.notes);
+          });
+
+          const insertQuery = `
+            INSERT INTO time_entries (harvest_entry_id, date, hours, billable_flag, notes)
+            VALUES ${values.join(',')}
+            ON CONFLICT (harvest_entry_id) DO UPDATE SET
+              hours = EXCLUDED.hours,
+              billable_flag = EXCLUDED.billable_flag,
+              notes = EXCLUDED.notes;
+          `;
+          await client.query(insertQuery, params);
+        }
       }
 
       await client.query('COMMIT');
