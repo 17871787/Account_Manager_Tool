@@ -5,6 +5,7 @@ import { SFTConnector } from '../../connectors/sft.connector';
 import { HubSpotConnector } from '../../connectors/hubspot.connector';
 import { getClient } from '../../models/database';
 import { captureException } from '../../utils/sentry';
+import { buildInsertQuery } from '../../utils/db';
 
 export interface SyncRouterDeps {
   harvestConnector?: HarvestConnector;
@@ -47,23 +48,25 @@ export default function createSyncRouter({
         await client.query('BEGIN');
 
         if (entries.length) {
-          const values: string[] = [];
-          const params: Array<string | number | Date | boolean | null> = [];
-          entries.forEach((entry, index) => {
-            const base = index * 5;
-            values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
-            params.push(entry.entryId, entry.date, entry.hours, entry.billableFlag, entry.notes);
-          });
+          const records = entries.map((entry) => [
+            entry.entryId,
+            entry.date,
+            entry.hours,
+            entry.billableFlag,
+            entry.notes,
+          ]);
 
-          const insertQuery = `
-            INSERT INTO time_entries (harvest_entry_id, date, hours, billable_flag, notes)
-            VALUES ${values.join(',')}
-            ON CONFLICT (harvest_entry_id) DO UPDATE SET
+          const { query, params } = buildInsertQuery(
+            'time_entries',
+            ['harvest_entry_id', 'date', 'hours', 'billable_flag', 'notes'],
+            records,
+            `ON CONFLICT (harvest_entry_id) DO UPDATE SET
               hours = EXCLUDED.hours,
               billable_flag = EXCLUDED.billable_flag,
-              notes = EXCLUDED.notes;
-          `;
-          await client.query(insertQuery, params);
+              notes = EXCLUDED.notes`
+          );
+
+          await client.query(query, params);
         }
 
         await client.query('COMMIT');
@@ -138,20 +141,21 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
         await client.query('BEGIN');
 
         if (revenues.length) {
-          const values: string[] = [];
-          const params: Array<string | number | Date | boolean | null> = [];
-          revenues.forEach((rev, index) => {
-            const base = index * 4;
-            values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`);
-            params.push(null, null, new Date(rev.month + '-01'), rev.recognisedRevenue);
-          });
+          const records = revenues.map((rev) => [
+            null,
+            null,
+            new Date(rev.month + '-01'),
+            rev.recognisedRevenue,
+          ]);
 
-          const insertQuery = `
-            INSERT INTO sft_revenue (client_id, project_id, month, recognised_revenue)
-            VALUES ${values.join(',')}
-            ON CONFLICT DO NOTHING;
-          `;
-          await client.query(insertQuery, params);
+          const { query, params } = buildInsertQuery(
+            'sft_revenue',
+            ['client_id', 'project_id', 'month', 'recognised_revenue'],
+            records,
+            'ON CONFLICT DO NOTHING'
+          );
+
+          await client.query(query, params);
           processed = revenues.length;
         }
 
