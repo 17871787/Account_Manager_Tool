@@ -1,3 +1,7 @@
+export interface AppError extends Error {
+  status?: number;
+}
+
 export interface HarvestTimeEntry {
   entryId: string;
   date: Date;

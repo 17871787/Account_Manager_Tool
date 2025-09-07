@@ -1,4 +1,25 @@
 import * as Sentry from '@sentry/nextjs';
+import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../types';
+
+export const sentryErrorMiddleware = (
+  err: AppError,
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  Sentry.withScope((scope) => {
+    scope.setContext('request', {
+      url: req.url,
+      method: req.method,
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+    });
+    Sentry.captureException(err);
+  });
+  next(err);
+};
 
 // Helper to capture exceptions with additional context
 export const captureException = (
