@@ -1,4 +1,4 @@
-import { Exception, HarvestTimeEntry } from '../types';
+import { Exception } from '../types';
 import { query } from '../models/database';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -33,6 +33,11 @@ export class ExceptionEngine {
             severity: variance > 10 ? 'high' : 'medium',
             description: `Rate mismatch: Expected £${expectedRate}/hr, found £${actualRate}/hr`,
             suggestedAction: `Update rate to £${expectedRate}/hr per rate policy`,
+            metadata: {
+              expectedRate,
+              actualRate,
+              variance,
+            },
           };
         }
         return null;
@@ -60,6 +65,11 @@ export class ExceptionEngine {
             severity: 'high',
             description: `Billable flag conflict: Task "${entry.task_name}" is ${task.category} but marked as ${entry.billable_flag ? 'billable' : 'non-billable'}`,
             suggestedAction: `Change billable flag to ${expectedBillable}`,
+            metadata: {
+              taskCategory: task.category,
+              expectedBillable,
+              entryBillableFlag: entry.billable_flag,
+            },
           };
         }
         return null;
@@ -96,9 +106,15 @@ export class ExceptionEngine {
             type: 'budget_breach',
             severity: utilizationRate > 100 ? 'high' : 'medium',
             description: `Budget utilization at ${utilizationRate.toFixed(1)}% for project`,
-            suggestedAction: utilizationRate > 100 ? 
-              'Project over budget - review with Finance' : 
+            suggestedAction: utilizationRate > 100 ?
+              'Project over budget - review with Finance' :
               'Approaching budget limit - monitor closely',
+            metadata: {
+              utilizationRate,
+              budgetHours: parseFloat(budget.budget_hours),
+              totalHours: parseFloat(budget.total_hours),
+              totalCost: parseFloat(budget.total_cost),
+            },
           };
         }
         return null;
@@ -124,6 +140,9 @@ export class ExceptionEngine {
             severity: 'medium',
             description: `Time logged to deprecated task: "${task.name}"`,
             suggestedAction: 'Reclassify to active task category',
+            metadata: {
+              taskName: task.name,
+            },
           };
         }
         return null;
@@ -142,6 +161,9 @@ export class ExceptionEngine {
               severity: 'high',
               description: 'Billable time entry missing rate',
               suggestedAction: 'Add rate from rate policy or set as non-billable',
+              metadata: {
+                rateType: 'billable_rate',
+              },
             };
           }
         }
@@ -151,6 +173,9 @@ export class ExceptionEngine {
             severity: 'medium',
             description: 'Time entry missing cost rate',
             suggestedAction: 'Add cost rate for accurate profitability',
+            metadata: {
+              rateType: 'cost_rate',
+            },
           };
         }
         return null;
@@ -168,10 +193,13 @@ export class ExceptionEngine {
           exceptions.push({
             id: uuidv4(),
             entryId: entry.id,
+            entityType: 'time_entry',
+            entityId: entry.id,
             type: exception.type as any,
             severity: exception.severity as any,
             description: exception.description,
             suggestedAction: exception.suggestedAction,
+            ...(exception.metadata ? { metadata: exception.metadata } : {}),
             status: 'pending',
           });
         }
@@ -311,5 +339,6 @@ interface ExceptionRule {
     severity: string;
     description: string;
     suggestedAction: string;
+    metadata?: any;
   } | null>;
 }
