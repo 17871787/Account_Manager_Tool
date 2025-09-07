@@ -45,7 +45,7 @@ jobs:
           path: coverage
 
       - name: SonarQube Scan
-        if: secrets.SONAR_TOKEN != ''
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
