@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { SFTRevenue } from '../types';
+import { captureException } from '../utils/sentry';
 
 export class SFTConnector {
   private accessToken: string | null = null;
@@ -23,7 +24,9 @@ export class SFTConnector {
 
       this.accessToken = response.data.access_token;
     } catch (error) {
-      console.error('SFT authentication failed:', error);
+      captureException(error, {
+        operation: 'SFTConnector.authenticate',
+      });
       throw error;
     }
   }
@@ -62,7 +65,12 @@ export class SFTConnector {
 
       return mockRevenue;
     } catch (error) {
-      console.error('Error fetching SFT revenue:', error);
+      captureException(error, {
+        operation: 'SFTConnector.getRecognisedRevenue',
+        clientName,
+        projectName,
+        month,
+      });
       return null;
     }
   }
@@ -76,7 +84,10 @@ export class SFTConnector {
       // Mock implementation - would query actual SharePoint list
       return [];
     } catch (error) {
-      console.error('Error fetching monthly revenue:', error);
+      captureException(error, {
+        operation: 'SFTConnector.getMonthlyRevenue',
+        month,
+      });
       return [];
     }
   }

@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { captureException } from '../utils/sentry';
 
 export interface HubSpotDeal {
   id: string;
@@ -50,7 +51,10 @@ export class HubSpotConnector {
       });
       return response.data.results;
     } catch (error) {
-      console.error('Error fetching HubSpot deals:', error);
+      captureException(error, {
+        operation: 'HubSpotConnector.getDeals',
+        limit,
+      });
       throw error;
     }
   }
@@ -65,7 +69,10 @@ export class HubSpotConnector {
       });
       return response.data.results;
     } catch (error) {
-      console.error('Error fetching HubSpot companies:', error);
+      captureException(error, {
+        operation: 'HubSpotConnector.getCompanies',
+        limit,
+      });
       throw error;
     }
   }
@@ -81,10 +88,13 @@ export class HubSpotConnector {
         inputs: dealIds.map((id: string) => ({ id })),
         properties: ['dealname', 'amount', 'closedate', 'dealstage', 'pipeline'],
       });
-      
+
       return dealsResponse.data.results;
     } catch (error) {
-      console.error('Error fetching deals by company:', error);
+      captureException(error, {
+        operation: 'HubSpotConnector.getDealsByCompany',
+        companyId,
+      });
       throw error;
     }
   }
@@ -123,7 +133,7 @@ export class HubSpotConnector {
         return sum + (parseFloat(deal.properties.amount) || 0);
       }, 0);
 
-      const activeDeals = deals.filter(d => 
+      const activeDeals = deals.filter(d =>
         !['closedwon', 'closedlost'].includes(d.properties.dealstage)
       );
       const pipeline = activeDeals.reduce((sum, deal) => {
@@ -139,7 +149,10 @@ export class HubSpotConnector {
         closedDealCount: closedWonDeals.length,
       };
     } catch (error) {
-      console.error('Error fetching revenue metrics:', error);
+      captureException(error, {
+        operation: 'HubSpotConnector.getRevenueMetrics',
+        companyName,
+      });
       return null;
     }
   }
@@ -163,7 +176,9 @@ export class HubSpotConnector {
         recordsProcessed: processed,
       };
     } catch (error) {
-      console.error('HubSpot sync failed:', error);
+      captureException(error, {
+        operation: 'HubSpotConnector.syncRevenueData',
+      });
       return {
         success: false,
         recordsProcessed: 0,
@@ -178,7 +193,9 @@ export class HubSpotConnector {
       });
       return true;
     } catch (error) {
-      console.error('HubSpot connection test failed:', error);
+      captureException(error, {
+        operation: 'HubSpotConnector.testConnection',
+      });
       return false;
     }
   }

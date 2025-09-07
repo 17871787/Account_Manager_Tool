@@ -4,6 +4,7 @@ import { HarvestConnector } from '../../connectors/harvest.connector';
 import { SFTConnector } from '../../connectors/sft.connector';
 import { HubSpotConnector } from '../../connectors/hubspot.connector';
 import { getClient } from '../../models/database';
+import { captureException } from '../../utils/sentry';
 
 export interface SyncRouterDeps {
   harvestConnector?: HarvestConnector;
@@ -20,6 +21,9 @@ export default function createSyncRouter({
 
   router.post('/sync/harvest', async (req: Request, res: Response) => {
     const connector = harvestConnector ?? new HarvestConnector();
+    let fromDate: string;
+    let toDate: string;
+    let clientId: string | undefined;
     try {
       const schema = z.object({
         fromDate: z
@@ -30,60 +34,70 @@ export default function createSyncRouter({
           .refine((v) => !Number.isNaN(Date.parse(v)), { message: 'Invalid toDate' }),
         clientId: z.string().optional()
       });
-      const { fromDate, toDate, clientId } = schema.parse(req.body);
+      ({ fromDate, toDate, clientId } = schema.parse(req.body));
 
-    const entries = await connector.getTimeEntries(
-      new Date(fromDate),
-      new Date(toDate),
-      clientId
-    );
+      const entries = await connector.getTimeEntries(
+        new Date(fromDate),
+        new Date(toDate),
+        clientId
+      );
 
-    const client = await getClient();
-    try {
-      await client.query('BEGIN');
+      const client = await getClient();
+      try {
+        await client.query('BEGIN');
 
-      if (entries.length) {
-        const values: string[] = [];
-        const params: Array<string | number | Date | boolean | null> = [];
-        entries.forEach((entry, index) => {
-          const base = index * 5;
-          values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
-          params.push(entry.entryId, entry.date, entry.hours, entry.billableFlag, entry.notes);
+        if (entries.length) {
+          const values: string[] = [];
+          const params: Array<string | number | Date | boolean | null> = [];
+          entries.forEach((entry, index) => {
+            const base = index * 5;
+            values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
+            params.push(entry.entryId, entry.date, entry.hours, entry.billableFlag, entry.notes);
+          });
+
+          const insertQuery = `
+            INSERT INTO time_entries (harvest_entry_id, date, hours, billable_flag, notes)
+            VALUES ${values.join(',')}
+            ON CONFLICT (harvest_entry_id) DO UPDATE SET
+              hours = EXCLUDED.hours,
+              billable_flag = EXCLUDED.billable_flag,
+              notes = EXCLUDED.notes;
+          `;
+          await client.query(insertQuery, params);
+        }
+
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          entriesProcessed: entries.length,
+          period: { fromDate, toDate },
+          source: 'harvest'
         });
-
-        const insertQuery = `
-          INSERT INTO time_entries (harvest_entry_id, date, hours, billable_flag, notes)
-          VALUES ${values.join(',')}
-          ON CONFLICT (harvest_entry_id) DO UPDATE SET
-            hours = EXCLUDED.hours,
-            billable_flag = EXCLUDED.billable_flag,
-            notes = EXCLUDED.notes;
-        `;
-        await client.query(insertQuery, params);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        captureException(err, {
+          operation: 'syncHarvest.db',
+          fromDate,
+          toDate,
+          clientId,
+        });
+        res.status(500).json({ error: 'Failed to sync Harvest data' });
+      } finally {
+        client.release();
       }
-
-      await client.query('COMMIT');
-      res.json({
-        success: true,
-        entriesProcessed: entries.length,
-        period: { fromDate, toDate },
-        source: 'harvest'
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      captureException(error, {
+        operation: 'syncHarvest',
+        fromDate,
+        toDate,
+        clientId,
       });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('Sync error:', err);
       res.status(500).json({ error: 'Failed to sync Harvest data' });
-    } finally {
-      client.release();
     }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
-    console.error('Sync error:', error);
-    res.status(500).json({ error: 'Failed to sync Harvest data' });
-  }
-});
+  });
 
 router.post('/sync/hubspot', async (req: Request, res: Response) => {
   const connector = hubspotConnector ?? new HubSpotConnector();
@@ -101,17 +115,20 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('HubSpot sync error:', error);
+    captureException(error, {
+      operation: 'syncHubSpot',
+    });
     res.status(500).json({ error: 'Failed to sync HubSpot data' });
   }
 });
 
   router.post('/sync/sft', async (req: Request, res: Response) => {
     const connector = sftConnector ?? new SFTConnector();
+    let monthStr: string | undefined;
     try {
       const schema = z.object({ month: z.string().optional() });
       const { month } = schema.parse(req.body);
-      const monthStr = month ?? new Date().toISOString().slice(0, 7);
+      monthStr = month ?? new Date().toISOString().slice(0, 7);
 
       const revenues = await connector.getMonthlyRevenue(monthStr);
 
@@ -148,7 +165,10 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
         });
       } catch (err) {
         await client.query('ROLLBACK');
-        console.error('SFT sync error:', err);
+        captureException(err, {
+          operation: 'syncSFT.db',
+          month: monthStr,
+        });
         res.status(500).json({ error: 'Failed to sync SFT data' });
       } finally {
         client.release();
@@ -157,7 +177,10 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      console.error('SFT sync error:', error);
+      captureException(error, {
+        operation: 'syncSFT',
+        month: monthStr,
+      });
       res.status(500).json({ error: 'Failed to sync SFT data' });
     }
   });
