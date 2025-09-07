@@ -208,7 +208,7 @@ export class ExceptionEngine {
             severity: exception.severity,
             description: exception.description,
             suggestedAction: exception.suggestedAction,
-            ...(exception.metadata ? { metadata: exception.metadata } : {}),
+            ...(exception.metadata ? { metadata: exception.metadata as Record<string, unknown> } : {}),
             createdAt: new Date(),
             status: 'pending',
           });
