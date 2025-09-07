@@ -73,7 +73,7 @@ export class HubSpotConnector {
   async getDealsByCompany(companyId: string): Promise<HubSpotDeal[]> {
     try {
       const response = await this.client.get(`/crm/v3/objects/companies/${companyId}/associations/deals`);
-      const dealIds = response.data.results.map((r: any) => r.id);
+      const dealIds = response.data.results.map((r: { id: string }) => r.id);
       
       if (dealIds.length === 0) return [];
       
@@ -89,7 +89,14 @@ export class HubSpotConnector {
     }
   }
 
-  async getRevenueMetrics(companyName: string): Promise<any> {
+  async getRevenueMetrics(companyName: string): Promise<{
+    companyName: string;
+    annualRevenue: number;
+    closedRevenue: number;
+    pipelineValue: number;
+    dealCount: number;
+    closedDealCount: number;
+  } | null> {
     try {
       // Search for company by name
       const searchResponse = await this.client.post('/crm/v3/objects/companies/search', {
