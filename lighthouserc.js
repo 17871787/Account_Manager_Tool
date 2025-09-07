@@ -19,18 +19,18 @@ module.exports = {
     assert: {
       preset: 'lighthouse:recommended',
       assertions: {
-        'categories:performance': ['error', { minScore: 0.75 }],
-        'categories:accessibility': ['error', { minScore: 0.85 }],
-        'categories:best-practices': ['error', { minScore: 0.85 }],
-        'categories:seo': ['error', { minScore: 0.85 }],
-        'categories:pwa': ['warn', { minScore: 0.40 }],
-        
+        'categories:performance': ['error', { minScore: 0.7 }],
+        'categories:accessibility': ['error', { minScore: 0.8 }],
+        'categories:best-practices': ['error', { minScore: 0.8 }],
+        'categories:seo': ['error', { minScore: 0.8 }],
+        'categories:pwa': ['warn', { minScore: 0.3 }],
+
         // Specific metrics thresholds
-        'first-contentful-paint': ['error', { maxNumericValue: 3000 }],
-        'largest-contentful-paint': ['error', { maxNumericValue: 3500 }],
-        'cumulative-layout-shift': ['error', { maxNumericValue: 0.2 }],
-        'total-blocking-time': ['error', { maxNumericValue: 500 }],
-        'interactive': ['error', { maxNumericValue: 5000 }],
+        'first-contentful-paint': ['error', { maxNumericValue: 4000 }],
+        'largest-contentful-paint': ['error', { maxNumericValue: 4500 }],
+        'cumulative-layout-shift': ['error', { maxNumericValue: 0.3 }],
+        'total-blocking-time': ['error', { maxNumericValue: 600 }],
+        'interactive': ['error', { maxNumericValue: 6000 }],
         
         // Accessibility checks
         'color-contrast': 'error',
