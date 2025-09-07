@@ -303,7 +303,7 @@ export class ExceptionEngine {
   }
 }
 
-interface ExceptionRule {
+export interface ExceptionRule {
   id: string;
   name: string;
   check: (entry: any) => Promise<{
