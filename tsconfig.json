@@ -18,6 +18,6 @@
     "allowSyntheticDefaultImports": true,
     "types": ["node"]
   },
-  "include": ["src/**/*", "api/**/*"],
+  "include": ["src/**/*.ts", "api/**/*.ts"],
   "exclude": ["node_modules", "dist", "tests"]
 }

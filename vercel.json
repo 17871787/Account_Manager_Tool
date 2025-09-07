@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "echo 'No build required'",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -10,6 +12,5 @@
     "api/index.ts": {
       "maxDuration": 30
     }
-  },
-  "public": true
+  }
 }
