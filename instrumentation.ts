@@ -1,7 +1,7 @@
-async function initSentry(runtime: 'node' | 'edge') {
+async function initSentry() {
   const Sentry = await import('@sentry/nextjs');
 
-  const options = {
+  Sentry.init({
     dsn: process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN,
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
     environment: process.env.NODE_ENV,
@@ -12,22 +12,25 @@ async function initSentry(runtime: 'node' | 'edge') {
 
       return event;
     },
-  };
-
-  const runtimeOptions = runtime === 'node' ? {} : {};
-
-  Sentry.init({
-    ...options,
-    ...runtimeOptions,
   });
 }
 
+/**
+ * Initializes Sentry for the current Next.js runtime.
+ *
+ * This function is executed via Next.js instrumentation and will
+ * set up Sentry for supported runtimes.
+ *
+ * Supported runtimes:
+ * - `nodejs` for Node.js server runtime
+ * - `edge` for the Edge runtime
+ */
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await initSentry('node');
+    await initSentry();
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
-    await initSentry('edge');
+    await initSentry();
   }
 }
