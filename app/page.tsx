@@ -1,43 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Container, Card, Heading, Text, Button, Flex, Box, Badge, Tabs, Grid } from '@radix-ui/themes'
-import { 
-  TrendingUp, TrendingDown, AlertCircle, DollarSign, 
-  Clock, FileText, Users, Activity, Download, RefreshCw 
+import {
+  TrendingUp, TrendingDown, AlertCircle, DollarSign,
+  Clock, FileText, Users, Activity, Download, RefreshCw
 } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import type { ProfitabilityPoint, ExceptionItem, BudgetDatum, SyncError, LastSync, SyncSource } from './types'
+import { mockProfitabilityData, mockExceptions, mockBudgetData, mockClients } from './mockData'
 
 export default function Dashboard() {
-  const [selectedClient, setSelectedClient] = useState('Arla')
-  const [syncing, setSyncing] = useState<string | null>(null)
-  const [lastSync, setLastSync] = useState({
-    harvest: null as Date | null,
-    hubspot: null as Date | null,
-    sft: null as Date | null,
+  const [selectedClient, setSelectedClient] = useState<string>('Arla')
+  const [syncing, setSyncing] = useState<SyncSource | null>(null)
+  const [lastSync, setLastSync] = useState<LastSync>({
+    harvest: null,
+    hubspot: null,
+    sft: null,
   })
-  const [profitabilityData, setProfitabilityData] = useState([
-    { month: 'Jul', revenue: 125000, cost: 85000, margin: 40000 },
-    { month: 'Aug', revenue: 135000, cost: 88000, margin: 47000 },
-    { month: 'Sep', revenue: 142000, cost: 92000, margin: 50000 },
-    { month: 'Oct', revenue: 138000, cost: 91000, margin: 47000 },
-    { month: 'Nov', revenue: 145000, cost: 94000, margin: 51000 },
-    { month: 'Dec', revenue: 155000, cost: 98000, margin: 57000 },
-  ])
+  const [profitabilityData, setProfitabilityData] = useState<ProfitabilityPoint[]>(mockProfitabilityData)
 
-  const [syncError, setSyncError] = useState<{ source: string; message: string } | null>(null)
-  const [exceptions, setExceptions] = useState([
-    { id: 1, type: 'Rate Mismatch', client: 'Arla', severity: 'high', description: 'Expected £150/hr, found £125/hr for Senior Consultant', action: 'Update rate in Harvest' },
-    { id: 2, type: 'Budget Breach', client: 'Sainsburys', severity: 'medium', description: 'Project at 92% budget utilization', action: 'Review with PM' },
-    { id: 3, type: 'Billable Conflict', client: 'ADM', severity: 'high', description: 'Data ingestion marked as billable', action: 'Reclassify as exclusion' },
-  ])
+  const [syncError, setSyncError] = useState<SyncError | null>(null)
+  const [exceptions, setExceptions] = useState<ExceptionItem[]>(mockExceptions)
 
-  const budgetData = [
-    { name: 'Used', value: 68, fill: '#3b82f6' },
-    { name: 'Remaining', value: 32, fill: '#e5e7eb' },
-  ]
+  const budgetData: BudgetDatum[] = mockBudgetData
 
-  const handleSync = async (source: 'harvest' | 'hubspot' | 'sft') => {
+  const handleSync = async (source: SyncSource) => {
     setSyncing(source)
     setSyncError(null) // Clear any previous errors
     try {
@@ -316,7 +304,7 @@ export default function Dashboard() {
             <Card size="3">
               <Heading size="4" className="mb-4">Client Portfolio</Heading>
               <Grid columns="3" gap="4">
-                {['Arla', 'Sainsburys', 'ADM', 'McCain', 'Trewithen', 'Red Tractor'].map((client) => (
+                {mockClients.map((client) => (
                   <Card key={client} variant="surface">
                     <Flex direction="column" gap="2">
                       <Heading size="3">{client}</Heading>
