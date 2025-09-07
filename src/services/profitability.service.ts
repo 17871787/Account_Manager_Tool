@@ -1,6 +1,33 @@
-import { ProfitabilityMetric, HarvestTimeEntry, SFTRevenue } from '../types';
+import { ProfitabilityMetric } from '../types';
 import { query } from '../models/database';
 import { format } from 'date-fns';
+
+interface CostRow {
+  billable_cost: string | null;
+  exclusion_cost: string | null;
+  exception_count: string | null;
+}
+
+interface RevenueRow {
+  recognised_revenue: string | null;
+}
+
+interface NameRow {
+  client_name: string;
+  project_name: string;
+}
+
+interface ProfitabilityMetricRow {
+  month: Date;
+  client_name: string;
+  project_name: string;
+  billable_cost: string;
+  exclusion_cost: string;
+  recognised_revenue: string;
+  margin: string;
+  margin_percentage: string;
+  exceptions_count: number;
+}
 
 export class ProfitabilityService {
   async calculateProfitability(
@@ -11,7 +38,7 @@ export class ProfitabilityService {
     const monthStr = format(month, 'yyyy-MM');
     
     // Get time entries for the month
-    const timeEntriesResult = await query(
+    const timeEntriesResult = await query<CostRow>(
       `SELECT 
         SUM(CASE WHEN t.category = 'billable' THEN te.cost_amount ELSE 0 END) as billable_cost,
         SUM(CASE WHEN t.category = 'exclusion' THEN te.cost_amount ELSE 0 END) as exclusion_cost,
@@ -25,10 +52,11 @@ export class ProfitabilityService {
       [clientId, projectId, month]
     );
 
-    const { billable_cost, exclusion_cost, exception_count } = timeEntriesResult.rows[0];
+    const { billable_cost, exclusion_cost, exception_count } =
+      timeEntriesResult.rows[0];
 
     // Get recognised revenue
-    const revenueResult = await query(
+    const revenueResult = await query<RevenueRow>(
       `SELECT recognised_revenue 
       FROM sft_revenue 
       WHERE client_id = $1 
@@ -37,16 +65,19 @@ export class ProfitabilityService {
       [clientId, projectId, month]
     );
 
-    const recognisedRevenue = revenueResult.rows[0]?.recognised_revenue || 0;
+    const recognisedRevenue = parseFloat(
+      revenueResult.rows[0]?.recognised_revenue ?? '0'
+    );
 
     // Calculate margin (Q-review formula)
     // Margin = Recognised Revenue - (Billable Service Time Cost + Attributable Exclusion Cost)
-    const totalCost = parseFloat(billable_cost || 0) + parseFloat(exclusion_cost || 0);
+    const totalCost =
+      parseFloat(billable_cost ?? '0') + parseFloat(exclusion_cost ?? '0');
     const margin = recognisedRevenue - totalCost;
     const marginPercentage = recognisedRevenue > 0 ? (margin / recognisedRevenue) * 100 : 0;
 
     // Get client and project names
-    const namesResult = await query(
+    const namesResult = await query<NameRow>(
       `SELECT c.name as client_name, p.name as project_name
       FROM clients c
       JOIN projects p ON p.client_id = c.id
@@ -60,12 +91,12 @@ export class ProfitabilityService {
       month: monthStr,
       client: client_name,
       project: project_name,
-      billableCost: parseFloat(billable_cost || 0),
-      exclusionCost: parseFloat(exclusion_cost || 0),
-      recognisedRevenue: recognisedRevenue,
-      margin: margin,
-      marginPercentage: marginPercentage,
-      exceptionsCount: parseInt(exception_count || 0),
+      billableCost: parseFloat(billable_cost ?? '0'),
+      exclusionCost: parseFloat(exclusion_cost ?? '0'),
+      recognisedRevenue,
+      margin,
+      marginPercentage,
+      exceptionsCount: parseInt(exception_count ?? '0', 10),
     };
 
     // Store the calculated metric
@@ -109,7 +140,7 @@ export class ProfitabilityService {
   }
 
   async getPortfolioProfitability(month: Date): Promise<ProfitabilityMetric[]> {
-    const result = await query(
+    const result = await query<ProfitabilityMetricRow>(
       `SELECT 
         pm.*,
         c.name as client_name,
@@ -139,7 +170,7 @@ export class ProfitabilityService {
     clientId: string,
     months: number = 6
   ): Promise<ProfitabilityMetric[]> {
-    const result = await query(
+    const result = await query<ProfitabilityMetricRow>(
       `SELECT 
         pm.*,
         c.name as client_name,
@@ -193,7 +224,7 @@ export class ProfitabilityService {
     const monthStr = format(month, 'yyyy-MM');
     
     // Get cost data
-    const costResult = await query(
+    const costResult = await query<CostRow>(
       `SELECT 
         SUM(CASE WHEN t.category = 'billable' THEN te.hours * te.cost_rate ELSE 0 END) as billable_cost,
         SUM(CASE WHEN t.category = 'exclusion' THEN te.hours * te.cost_rate ELSE 0 END) as exclusion_cost,
@@ -208,7 +239,7 @@ export class ProfitabilityService {
     );
 
     // Get revenue data
-    const revenueResult = await query(
+    const revenueResult = await query<RevenueRow>(
       `SELECT recognised_revenue 
        FROM sft_revenue 
        WHERE client_id = $1 
@@ -218,19 +249,23 @@ export class ProfitabilityService {
     );
 
     // Get names
-    const namesResult = await query(
+    const namesResult = await query<NameRow>(
       `SELECT c.name as client_name, p.name as project_name
        FROM clients c, projects p
        WHERE c.id = $1 AND p.id = $2`,
       [clientId, projectId]
     );
 
-    const { billable_cost, exclusion_cost, exception_count } = costResult.rows[0] || {};
-    const recognisedRevenue = revenueResult.rows[0]?.recognised_revenue || 0;
+    const { billable_cost, exclusion_cost, exception_count } =
+      costResult.rows[0] || {};
+    const recognisedRevenue = parseFloat(
+      revenueResult.rows[0]?.recognised_revenue ?? '0'
+    );
     const { client_name, project_name } = namesResult.rows[0] || {};
 
     // Calculate margin (Q-review formula)
-    const totalCost = parseFloat(billable_cost || 0) + parseFloat(exclusion_cost || 0);
+    const totalCost =
+      parseFloat(billable_cost ?? '0') + parseFloat(exclusion_cost ?? '0');
     const margin = recognisedRevenue - totalCost;
     const marginPercentage = recognisedRevenue > 0 ? (margin / recognisedRevenue) * 100 : 0;
 
@@ -239,12 +274,12 @@ export class ProfitabilityService {
       month: monthStr,
       client: client_name || '',
       project: project_name || '',
-      billableCost: parseFloat(billable_cost || 0),
-      exclusionCost: parseFloat(exclusion_cost || 0),
+      billableCost: parseFloat(billable_cost ?? '0'),
+      exclusionCost: parseFloat(exclusion_cost ?? '0'),
       recognisedRevenue,
       margin,
       marginPercentage,
-      exceptionsCount: exception_count || 0,
+      exceptionsCount: parseInt(exception_count ?? '0', 10),
     };
   }
 }
