@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { ExportService } from '../../services/export.service';
+import { InvoiceExport } from '../../types';
 
 const router = Router();
 const exportService = new ExportService();
