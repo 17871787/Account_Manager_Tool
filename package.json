@@ -8,10 +8,16 @@
     "build": "next build",
     "start": "next start",
     "test": "jest",
-    "lint": "eslint src --ext .ts",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx scripts/migrate.ts",
-    "api-dev": "tsx watch src/index.ts"
+    "api-dev": "tsx watch src/index.ts",
+    "lighthouse": "lhci autorun",
+    "audit": "npm audit --audit-level=moderate",
+    "analyze": "ANALYZE=true next build"
   },
   "repository": {
     "type": "git",
