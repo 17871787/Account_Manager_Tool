@@ -2,10 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react",
     "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
+    "rootDir": "./",
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -15,8 +16,8 @@
     "sourceMap": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "types": ["node", "jest"]
+    "types": ["node"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "api/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }
