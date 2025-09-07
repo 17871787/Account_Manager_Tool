@@ -109,5 +109,28 @@ describe('ProfitabilityService', () => {
       expect(result.variance).toBeLessThanOrEqual(1);
       expect(result.withinTolerance).toBe(true);
     });
+
+    it('should return infinite variance when expected margin is 0', async () => {
+      querySpy.mockImplementation(() => Promise.resolve({
+        rows: [{
+          billable_cost: '0',
+          exclusion_cost: '0',
+          exception_count: '0',
+          recognised_revenue: 100000,
+          client_name: 'Test Client',
+          project_name: 'Test Project'
+        }]
+      }));
+
+      const result = await service.backTestAccuracy(
+        'client-id',
+        'project-id',
+        new Date('2024-01-01'),
+        0
+      );
+
+      expect(result.variance).toBe(Infinity);
+      expect(result.withinTolerance).toBe(false);
+    });
   });
 });
