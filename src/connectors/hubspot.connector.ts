@@ -32,10 +32,16 @@ export class HubSpotConnector {
   private client: AxiosInstance;
 
   constructor() {
+    const apiKey = process.env.HUBSPOT_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('HUBSPOT_API_KEY is not set');
+    }
+
     this.client = axios.create({
       baseURL: 'https://api.hubapi.com',
       headers: {
-        'Authorization': `Bearer ${process.env.HUBSPOT_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });
