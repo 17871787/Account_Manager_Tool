@@ -1,19 +1,24 @@
 import { render, screen } from '@testing-library/react';
+import type { FC, ReactNode } from 'react';
 import Page from '../page';
 
+const MockComponent: FC<{ children?: ReactNode }> = ({ children }) => (
+  <div>{children}</div>
+);
+
 jest.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  LineChart: ({ children }: any) => <div>{children}</div>,
+  ResponsiveContainer: MockComponent,
+  LineChart: MockComponent,
   Line: () => <div />,
-  BarChart: ({ children }: any) => <div>{children}</div>,
+  BarChart: MockComponent,
   Bar: () => <div />,
   XAxis: () => <div />,
   YAxis: () => <div />,
   CartesianGrid: () => <div />,
   Tooltip: () => <div />,
   Legend: () => <div />,
-  PieChart: ({ children }: any) => <div>{children}</div>,
-  Pie: ({ children }: any) => <div>{children}</div>,
+  PieChart: MockComponent,
+  Pie: MockComponent,
   Cell: () => <div />,
 }));
 
