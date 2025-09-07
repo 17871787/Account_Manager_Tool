@@ -1,5 +1,12 @@
 import axios, { AxiosInstance } from 'axios';
-import { HarvestTimeEntry, HarvestTimeEntryApiResponse } from '../types';
+import {
+  HarvestTimeEntry,
+  HarvestTimeEntryApiResponse,
+  HarvestProject,
+  HarvestClient,
+  HarvestTask,
+  HarvestUser,
+} from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 export class HarvestConnector {
@@ -58,48 +65,70 @@ export class HarvestConnector {
     }
   }
 
-  async getProjects(isActive = true): Promise<unknown[]> {
+  async getProjects(isActive = true): Promise<HarvestProject[]> {
     try {
       const response = await this.client.get('/projects', {
         params: { is_active: isActive, per_page: 100 },
       });
-      return response.data.projects;
+      return response.data.projects.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        clientId: p.client?.id ?? p.client_id,
+        isActive: p.is_active,
+      }));
     } catch (error) {
       console.error('Error fetching Harvest projects:', error);
       throw error;
     }
   }
 
-  async getClients(isActive = true): Promise<unknown[]> {
+  async getClients(isActive = true): Promise<HarvestClient[]> {
     try {
       const response = await this.client.get('/clients', {
         params: { is_active: isActive, per_page: 100 },
       });
-      return response.data.clients;
+      return response.data.clients.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        isActive: c.is_active,
+      }));
     } catch (error) {
       console.error('Error fetching Harvest clients:', error);
       throw error;
     }
   }
 
-  async getTasks(): Promise<unknown[]> {
+  async getTasks(): Promise<HarvestTask[]> {
     try {
       const response = await this.client.get('/tasks', {
         params: { per_page: 100 },
       });
-      return response.data.tasks;
+      return response.data.tasks.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        billableByDefault: t.billable_by_default,
+        defaultHourlyRate: t.default_hourly_rate,
+        isActive: t.is_active,
+      }));
     } catch (error) {
       console.error('Error fetching Harvest tasks:', error);
       throw error;
     }
   }
 
-  async getUsers(isActive = true): Promise<unknown[]> {
+  async getUsers(isActive = true): Promise<HarvestUser[]> {
     try {
       const response = await this.client.get('/users', {
         params: { is_active: isActive, per_page: 100 },
       });
-      return response.data.users;
+      return response.data.users.map((u: any) => ({
+        id: u.id,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        email: u.email,
+        isActive: u.is_active,
+      }));
     } catch (error) {
       console.error('Error fetching Harvest users:', error);
       throw error;
