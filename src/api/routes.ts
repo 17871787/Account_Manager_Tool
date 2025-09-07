@@ -5,8 +5,7 @@ import { HubSpotConnector } from '../connectors/hubspot.connector';
 import { ProfitabilityService } from '../services/profitability.service';
 import { ExceptionEngine } from '../rules/exception.engine';
 import { ExportService } from '../services/export.service';
-import { query } from '../models/database';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { query, getClient } from '../models/database';
 
 const router = Router();
 const harvestConnector = new HarvestConnector();
@@ -31,29 +30,44 @@ router.post('/sync/harvest', async (req: Request, res: Response) => {
       clientId
     );
 
-    // Process and store entries
-    let processed = 0;
-    for (const entry of entries) {
-      // Store in database (simplified - would need proper mapping)
-      await query(
-        `INSERT INTO time_entries 
-          (harvest_entry_id, date, hours, billable_flag, notes)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (harvest_entry_id) DO UPDATE SET
-          hours = $3,
-          billable_flag = $4,
-          notes = $5`,
-        [entry.entryId, entry.date, entry.hours, entry.billableFlag, entry.notes]
-      );
-      processed++;
-    }
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
 
-    res.json({ 
-      success: true, 
-      entriesProcessed: processed,
-      period: { fromDate, toDate },
-      source: 'harvest'
-    });
+      if (entries.length) {
+        const values: string[] = [];
+        const params: Array<string | number | Date | boolean | null> = [];
+        entries.forEach((entry, index) => {
+          const base = index * 5;
+          values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
+          params.push(entry.entryId, entry.date, entry.hours, entry.billableFlag, entry.notes);
+        });
+
+        const insertQuery = `
+          INSERT INTO time_entries (harvest_entry_id, date, hours, billable_flag, notes)
+          VALUES ${values.join(',')}
+          ON CONFLICT (harvest_entry_id) DO UPDATE SET
+            hours = EXCLUDED.hours,
+            billable_flag = EXCLUDED.billable_flag,
+            notes = EXCLUDED.notes;
+        `;
+        await client.query(insertQuery, params);
+      }
+
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        entriesProcessed: entries.length,
+        period: { fromDate, toDate },
+        source: 'harvest'
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Sync error:', err);
+      res.status(500).json({ error: 'Failed to sync Harvest data' });
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('Sync error:', error);
     res.status(500).json({ error: 'Failed to sync Harvest data' });
@@ -85,21 +99,45 @@ router.post('/sync/sft', async (req: Request, res: Response) => {
     
     // Get all revenue data for the month
     const revenues = await sftConnector.getMonthlyRevenue(monthStr);
-    
+
+    const client = await getClient();
     let processed = 0;
-    for (const revenue of revenues) {
-      // Store in database
-      // This would need proper client/project ID mapping
-      processed++;
+    try {
+      await client.query('BEGIN');
+
+      if (revenues.length) {
+        const values: string[] = [];
+        const params: Array<string | number | Date | boolean | null> = [];
+        revenues.forEach((rev, index) => {
+          const base = index * 4;
+          values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`);
+          params.push(null, null, new Date(rev.month + '-01'), rev.recognisedRevenue);
+        });
+
+        const insertQuery = `
+          INSERT INTO sft_revenue (client_id, project_id, month, recognised_revenue)
+          VALUES ${values.join(',')}
+          ON CONFLICT DO NOTHING;
+        `;
+        await client.query(insertQuery, params);
+        processed = revenues.length;
+      }
+
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        recordsProcessed: processed,
+        source: 'sft',
+        month: monthStr,
+        message: `Synced ${processed} revenue records from Sales Forecast Tracker`
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('SFT sync error:', err);
+      res.status(500).json({ error: 'Failed to sync SFT data' });
+    } finally {
+      client.release();
     }
-    
-    res.json({ 
-      success: true,
-      recordsProcessed: processed,
-      source: 'sft',
-      month: monthStr,
-      message: `Synced ${processed} revenue records from Sales Forecast Tracker`
-    });
   } catch (error) {
     console.error('SFT sync error:', error);
     res.status(500).json({ error: 'Failed to sync SFT data' });
