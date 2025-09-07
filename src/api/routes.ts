@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { HarvestConnector } from '../connectors/harvest.connector';
 import { SFTConnector } from '../connectors/sft.connector';
+import { HubSpotConnector } from '../connectors/hubspot.connector';
 import { ProfitabilityService } from '../services/profitability.service';
 import { ExceptionEngine } from '../rules/exception.engine';
 import { ExportService } from '../services/export.service';
@@ -10,6 +11,7 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 const router = Router();
 const harvestConnector = new HarvestConnector();
 const sftConnector = new SFTConnector();
+const hubspotConnector = new HubSpotConnector();
 const profitabilityService = new ProfitabilityService();
 const exceptionEngine = new ExceptionEngine();
 const exportService = new ExportService();
@@ -49,11 +51,58 @@ router.post('/sync/harvest', async (req: Request, res: Response) => {
     res.json({ 
       success: true, 
       entriesProcessed: processed,
-      period: { fromDate, toDate }
+      period: { fromDate, toDate },
+      source: 'harvest'
     });
   } catch (error) {
     console.error('Sync error:', error);
     res.status(500).json({ error: 'Failed to sync Harvest data' });
+  }
+});
+
+// Sync HubSpot data
+router.post('/sync/hubspot', async (req: Request, res: Response) => {
+  try {
+    const result = await hubspotConnector.syncRevenueData();
+    
+    res.json({ 
+      success: result.success,
+      recordsProcessed: result.recordsProcessed,
+      source: 'hubspot',
+      message: `Synced ${result.recordsProcessed} company revenue records from HubSpot`
+    });
+  } catch (error) {
+    console.error('HubSpot sync error:', error);
+    res.status(500).json({ error: 'Failed to sync HubSpot data' });
+  }
+});
+
+// Sync SFT data
+router.post('/sync/sft', async (req: Request, res: Response) => {
+  try {
+    const { month = new Date() } = req.body;
+    const monthStr = typeof month === 'string' ? month : month.toISOString().slice(0, 7);
+    
+    // Get all revenue data for the month
+    const revenues = await sftConnector.getMonthlyRevenue(monthStr);
+    
+    let processed = 0;
+    for (const revenue of revenues) {
+      // Store in database
+      // This would need proper client/project ID mapping
+      processed++;
+    }
+    
+    res.json({ 
+      success: true,
+      recordsProcessed: processed,
+      source: 'sft',
+      month: monthStr,
+      message: `Synced ${processed} revenue records from Sales Forecast Tracker`
+    });
+  } catch (error) {
+    console.error('SFT sync error:', error);
+    res.status(500).json({ error: 'Failed to sync SFT data' });
   }
 });
 

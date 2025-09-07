@@ -10,6 +10,12 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 
 export default function Dashboard() {
   const [selectedClient, setSelectedClient] = useState('Arla')
+  const [syncing, setSyncing] = useState<string | null>(null)
+  const [lastSync, setLastSync] = useState({
+    harvest: null as Date | null,
+    hubspot: null as Date | null,
+    sft: null as Date | null,
+  })
   const [profitabilityData, setProfitabilityData] = useState([
     { month: 'Jul', revenue: 125000, cost: 85000, margin: 40000 },
     { month: 'Aug', revenue: 135000, cost: 88000, margin: 47000 },
@@ -30,6 +36,34 @@ export default function Dashboard() {
     { name: 'Remaining', value: 32, fill: '#e5e7eb' },
   ]
 
+  const handleSync = async (source: 'harvest' | 'hubspot' | 'sft') => {
+    setSyncing(source)
+    try {
+      const endpoint = source === 'harvest' ? '/api/sync/harvest' :
+                       source === 'hubspot' ? '/api/sync/hubspot' :
+                       '/api/sync/sft'
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          toDate: new Date().toISOString(),
+        }),
+      })
+      
+      if (response.ok) {
+        setLastSync(prev => ({ ...prev, [source]: new Date() }))
+        // Refresh data after sync
+        // In a real app, you'd fetch updated data here
+      }
+    } catch (error) {
+      console.error(`Failed to sync ${source}:`, error)
+    } finally {
+      setSyncing(null)
+    }
+  }
+
   return (
     <Container size="4" className="py-8">
       {/* Header */}
@@ -39,9 +73,34 @@ export default function Dashboard() {
           <Text size="3" color="gray">Profitability & Billing Dashboard</Text>
         </Box>
         <Flex gap="3">
-          <Button variant="soft" size="3">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Sync Harvest
+          <Button 
+            variant="soft" 
+            size="3"
+            onClick={() => handleSync('harvest')}
+            disabled={syncing === 'harvest'}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${syncing === 'harvest' ? 'animate-spin' : ''}`} />
+            {syncing === 'harvest' ? 'Syncing...' : 'Sync Harvest'}
+          </Button>
+          <Button 
+            variant="soft" 
+            size="3" 
+            color="orange"
+            onClick={() => handleSync('hubspot')}
+            disabled={syncing === 'hubspot'}
+          >
+            <Activity className={`w-4 h-4 mr-2 ${syncing === 'hubspot' ? 'animate-pulse' : ''}`} />
+            {syncing === 'hubspot' ? 'Syncing...' : 'Sync HubSpot'}
+          </Button>
+          <Button 
+            variant="soft" 
+            size="3" 
+            color="purple"
+            onClick={() => handleSync('sft')}
+            disabled={syncing === 'sft'}
+          >
+            <TrendingUp className={`w-4 h-4 mr-2 ${syncing === 'sft' ? 'animate-pulse' : ''}`} />
+            {syncing === 'sft' ? 'Syncing...' : 'Sync SFT'}
           </Button>
           <Button size="3">
             <Download className="w-4 h-4 mr-2" />

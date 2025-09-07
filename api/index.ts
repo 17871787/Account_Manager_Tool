@@ -17,7 +17,11 @@ app.get('/', (req, res) => {
     status: 'operational',
     endpoints: {
       health: '/api/health',
-      sync: '/api/sync/harvest',
+      sync: {
+        harvest: '/api/sync/harvest',
+        hubspot: '/api/sync/hubspot',
+        sft: '/api/sync/sft'
+      },
       profitability: '/api/profitability/*',
       exceptions: '/api/exceptions/*',
       export: '/api/export/*',
