@@ -5,12 +5,6 @@ import routes from '../src/api/routes';
 
 const app = express();
 
-// Initialize Sentry request handler (must be first)
-app.use(Sentry.requestHandler());
-
-// Enable Sentry tracing  
-app.use(Sentry.tracingHandler());
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -43,7 +37,7 @@ app.get('/', (req, res) => {
 app.use('/api', routes);
 
 // Sentry error handler (must be before other error handlers)
-app.use(Sentry.errorHandler());
+app.use(Sentry.expressErrorHandler());
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

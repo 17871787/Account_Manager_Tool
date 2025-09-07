@@ -17,10 +17,10 @@ export class ExceptionEngineOptimized {
 
     // Batch fetch all needed data upfront
     const entryIds = entries.map(e => e.entryId);
-    const taskIds = [...new Set(entries.map(e => e.taskId))];
-    const clientIds = [...new Set(entries.map(e => e.clientId))];
-    const projectIds = [...new Set(entries.map(e => e.projectId))];
-    const personIds = [...new Set(entries.map(e => e.personId))];
+    const taskIds = [...new Set(entries.map(e => e.task.id))];
+    const clientIds = [...new Set(entries.map(e => e.client.id))];
+    const projectIds = [...new Set(entries.map(e => e.project.id))];
+    const personIds = [...new Set(entries.map(e => e.user.id))];
 
     // Batch queries - ONE query per data type instead of N queries
     const [tasks, ratePolicies, budgets] = await Promise.all([
@@ -72,10 +72,10 @@ export class ExceptionEngineOptimized {
     const exceptions: Exception[] = [];
 
     for (const entry of entries) {
-      const task = taskMap.get(entry.taskId);
-      const ratePolicyKey = `${entry.personId}-${entry.clientId}`;
+      const task = taskMap.get(entry.task.id);
+      const ratePolicyKey = `${entry.user.id}-${entry.client.id}`;
       const ratePolicies = ratePolicyMap.get(ratePolicyKey) || [];
-      const budget = budgetMap.get(entry.projectId);
+      const budget = budgetMap.get(entry.project.id);
 
       // Check rate mismatch
       const applicableRate = this.findApplicableRate(ratePolicies, entry.date);
@@ -168,7 +168,7 @@ export class ExceptionEngineOptimized {
             description: `Project at ${utilization.toFixed(1)}% of budget`,
             suggestedAction: utilization >= 100 ? 'Stop work or request budget extension' : 'Alert PM about approaching limit',
             entityType: 'project',
-            entityId: entry.projectId,
+            entityId: entry.project.id,
             status: 'pending',
             createdAt: new Date(),
             metadata: {
@@ -193,8 +193,8 @@ export class ExceptionEngineOptimized {
           status: 'pending',
           createdAt: new Date(),
           metadata: {
-            personId: entry.personId,
-            clientId: entry.clientId
+            personId: entry.user.id,
+            clientId: entry.client.id
           }
         });
       }

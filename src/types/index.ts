@@ -1,16 +1,28 @@
 export interface HarvestTimeEntry {
   entryId: string;
   date: Date;
-  client: string;
-  project: string;
-  task: string;
+  client: {
+    id: string;
+    name: string;
+  };
+  project: {
+    id: string;
+    name: string;
+  };
+  task: {
+    id: string;
+    name: string;
+  };
   notes: string;
   hours: number;
   billableFlag: boolean;
   invoicedFlag: boolean;
-  firstName: string;
-  lastName: string;
-  role: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
   billableRate: number;
   billableAmount: number;
   costRate: number;
