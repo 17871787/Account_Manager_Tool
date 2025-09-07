@@ -197,6 +197,10 @@ export class ProfitabilityService {
     }));
   }
 
+  /**
+   * Compare expected margin with calculated margin.
+   * Variance is set to Infinity if expectedMargin is 0 to avoid division by zero.
+   */
   async backTestAccuracy(
     clientId: string,
     projectId: string,
@@ -205,7 +209,11 @@ export class ProfitabilityService {
   ): Promise<{ variance: number; withinTolerance: boolean; calculatedMargin: number }> {
     // Calculate WITHOUT persisting (read-only for back-testing)
     const calculated = await this.calculateProfitabilityReadOnly(clientId, projectId, month);
-    const variance = Math.abs(calculated.margin - expectedMargin) / expectedMargin * 100;
+    // Avoid division by zero when the expected margin is 0
+    const variance =
+      expectedMargin === 0
+        ? Infinity
+        : (Math.abs(calculated.margin - expectedMargin) / Math.abs(expectedMargin)) * 100;
     const withinTolerance = variance <= 1; // ±1% tolerance
 
     return {
