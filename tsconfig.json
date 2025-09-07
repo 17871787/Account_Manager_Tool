@@ -34,7 +34,6 @@
   "include": [
     "next-env.d.ts",
     "app/**/*.{ts,tsx}",
-    "api/**/*.ts",
     "src/**/*.ts"
   ],
   "exclude": [
