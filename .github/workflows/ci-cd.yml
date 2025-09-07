@@ -10,8 +10,6 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -27,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build API
+        run: npm run build:api
+
       - name: Run ESLint
         run: npm run lint
 
@@ -40,10 +41,10 @@ jobs:
         run: npm run build
 
       - name: SonarQube Scan
-        if: env.SONAR_TOKEN != ''
+        if: secrets.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v5
         env:
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
 #  Lighthouse CI Testing (disabled until credentials are configured)
