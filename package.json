@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:api && next build",
+    "build": "next build",
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
