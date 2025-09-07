@@ -22,7 +22,7 @@ export default function Error({
           Oops! Something went wrong
         </h2>
         <p className="mb-6 text-gray-600">
-          We've encountered an error. The issue has been reported to our team.
+          We&apos;ve encountered an error. The issue has been reported to our team.
         </p>
         <div className="mb-4 rounded bg-gray-100 p-4">
           <p className="text-sm text-gray-700">
