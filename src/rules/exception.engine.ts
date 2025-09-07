@@ -2,6 +2,15 @@ import { Exception } from '../types';
 import { query } from '../models/database';
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * ExceptionEngine processes time-entry records and applies a series of
+ * database-backed rules to detect inconsistencies. Each rule performs its own
+ * query which keeps the implementation straightforward and easy to extend, but
+ * also means that processing large batches of entries can result in a high
+ * number of database calls (an "N+1" pattern). Use this engine for smaller
+ * workloads or interactive scenarios where clarity and rule isolation are more
+ * important than raw throughput.
+ */
 export class ExceptionEngine {
   private rules: ExceptionRule[] = [];
 
