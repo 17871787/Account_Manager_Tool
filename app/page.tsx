@@ -25,6 +25,7 @@ export default function Dashboard() {
     { month: 'Dec', revenue: 155000, cost: 98000, margin: 57000 },
   ])
 
+  const [syncError, setSyncError] = useState<{ source: string; message: string } | null>(null)
   const [exceptions, setExceptions] = useState([
     { id: 1, type: 'Rate Mismatch', client: 'Arla', severity: 'high', description: 'Expected £150/hr, found £125/hr for Senior Consultant', action: 'Update rate in Harvest' },
     { id: 2, type: 'Budget Breach', client: 'Sainsburys', severity: 'medium', description: 'Project at 92% budget utilization', action: 'Review with PM' },
@@ -38,6 +39,7 @@ export default function Dashboard() {
 
   const handleSync = async (source: 'harvest' | 'hubspot' | 'sft') => {
     setSyncing(source)
+    setSyncError(null) // Clear any previous errors
     try {
       const endpoint = source === 'harvest' ? '/api/sync/harvest' :
                        source === 'hubspot' ? '/api/sync/hubspot' :
@@ -56,8 +58,18 @@ export default function Dashboard() {
         setLastSync(prev => ({ ...prev, [source]: new Date() }))
         // Refresh data after sync
         // In a real app, you'd fetch updated data here
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
+        setSyncError({
+          source: source.toUpperCase(),
+          message: errorData.message || `Failed to sync ${source}. Please try again.`
+        })
       }
     } catch (error) {
+      setSyncError({
+        source: source.toUpperCase(),
+        message: `Connection failed. Please check your ${source.toUpperCase()} credentials.`
+      })
       console.error(`Failed to sync ${source}:`, error)
     } finally {
       setSyncing(null)
@@ -108,6 +120,28 @@ export default function Dashboard() {
           </Button>
         </Flex>
       </Flex>
+
+      {/* Sync Error Alert */}
+      {syncError && (
+        <Card className="mb-4 border-red-500 bg-red-50">
+          <Flex justify="between" align="center">
+            <Flex gap="3" align="center">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <Text color="red" weight="medium">
+                {syncError.source} Sync Failed: {syncError.message}
+              </Text>
+            </Flex>
+            <Button 
+              size="1" 
+              variant="ghost" 
+              color="red"
+              onClick={() => setSyncError(null)}
+            >
+              Dismiss
+            </Button>
+          </Flex>
+        </Card>
+      )}
 
       {/* Key Metrics */}
       <Grid columns="4" gap="4" className="mb-8">

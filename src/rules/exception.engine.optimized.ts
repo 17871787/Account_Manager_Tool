@@ -42,10 +42,10 @@ export class ExceptionEngineOptimized {
         [personIds, clientIds]
       ),
       
-      // Get all project budgets at once
+      // Get all project budgets at once (with COALESCE for null safety)
       query(
         `SELECT project_id, budget_hours, 
-         SUM(hours) as hours_used 
+         COALESCE(SUM(hours), 0) as hours_used 
          FROM projects p
          LEFT JOIN time_entries te ON te.project_id = p.id
          WHERE p.id = ANY($1::text[])
@@ -148,9 +148,17 @@ export class ExceptionEngineOptimized {
         }
       }
 
-      // Check budget breach
+      // Check budget breach (with NaN protection)
       if (budget && budget.budget_hours) {
-        const utilization = (parseFloat(budget.hours_used) / parseFloat(budget.budget_hours)) * 100;
+        const hoursUsed = parseFloat(budget.hours_used || '0');
+        const budgetHours = parseFloat(budget.budget_hours || '0');
+        
+        // Skip if budget hours is 0 or invalid
+        if (budgetHours <= 0 || isNaN(hoursUsed) || isNaN(budgetHours)) {
+          continue;
+        }
+        
+        const utilization = (hoursUsed / budgetHours) * 100;
         
         if (utilization >= 90) {
           exceptions.push({

@@ -148,9 +148,9 @@ export class ProfitabilityService {
       JOIN clients c ON pm.client_id = c.id
       JOIN projects p ON pm.project_id = p.id
       WHERE pm.client_id = $1
-        AND pm.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '${months} months')
+        AND pm.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL $2)
       ORDER BY pm.month DESC`,
-      [clientId]
+      [clientId, `${months} months`]
     );
 
     return result.rows.map(row => ({
@@ -171,14 +171,80 @@ export class ProfitabilityService {
     projectId: string,
     month: Date,
     expectedMargin: number
-  ): Promise<{ variance: number; withinTolerance: boolean }> {
-    const calculated = await this.calculateProfitability(clientId, projectId, month);
+  ): Promise<{ variance: number; withinTolerance: boolean; calculatedMargin: number }> {
+    // Calculate WITHOUT persisting (read-only for back-testing)
+    const calculated = await this.calculateProfitabilityReadOnly(clientId, projectId, month);
     const variance = Math.abs(calculated.margin - expectedMargin) / expectedMargin * 100;
     const withinTolerance = variance <= 1; // ±1% tolerance
 
     return {
       variance,
       withinTolerance,
+      calculatedMargin: calculated.margin,
+    };
+  }
+
+  // Read-only version for back-testing that doesn't persist
+  private async calculateProfitabilityReadOnly(
+    clientId: string,
+    projectId: string,
+    month: Date
+  ): Promise<ProfitabilityMetric> {
+    const monthStr = format(month, 'yyyy-MM');
+    
+    // Get cost data
+    const costResult = await query(
+      `SELECT 
+        SUM(CASE WHEN t.category = 'billable' THEN te.hours * te.cost_rate ELSE 0 END) as billable_cost,
+        SUM(CASE WHEN t.category = 'exclusion' THEN te.hours * te.cost_rate ELSE 0 END) as exclusion_cost,
+        COUNT(DISTINCT e.id) as exception_count
+      FROM time_entries te
+      LEFT JOIN tasks t ON te.task_id = t.id
+      LEFT JOIN exceptions e ON e.entity_id = te.id AND e.entity_type = 'time_entry'
+      WHERE te.client_id = $1 
+        AND te.project_id = $2
+        AND DATE_TRUNC('month', te.date) = DATE_TRUNC('month', $3::date)`,
+      [clientId, projectId, month]
+    );
+
+    // Get revenue data
+    const revenueResult = await query(
+      `SELECT recognised_revenue 
+       FROM sft_revenue 
+       WHERE client_id = $1 
+         AND project_id = $2 
+         AND month = DATE_TRUNC('month', $3::date)`,
+      [clientId, projectId, month]
+    );
+
+    // Get names
+    const namesResult = await query(
+      `SELECT c.name as client_name, p.name as project_name
+       FROM clients c, projects p
+       WHERE c.id = $1 AND p.id = $2`,
+      [clientId, projectId]
+    );
+
+    const { billable_cost, exclusion_cost, exception_count } = costResult.rows[0] || {};
+    const recognisedRevenue = revenueResult.rows[0]?.recognised_revenue || 0;
+    const { client_name, project_name } = namesResult.rows[0] || {};
+
+    // Calculate margin (Q-review formula)
+    const totalCost = parseFloat(billable_cost || 0) + parseFloat(exclusion_cost || 0);
+    const margin = recognisedRevenue - totalCost;
+    const marginPercentage = recognisedRevenue > 0 ? (margin / recognisedRevenue) * 100 : 0;
+
+    // Return WITHOUT persisting
+    return {
+      month: monthStr,
+      client: client_name || '',
+      project: project_name || '',
+      billableCost: parseFloat(billable_cost || 0),
+      exclusionCost: parseFloat(exclusion_cost || 0),
+      recognisedRevenue,
+      margin,
+      marginPercentage,
+      exceptionsCount: exception_count || 0,
     };
   }
 }

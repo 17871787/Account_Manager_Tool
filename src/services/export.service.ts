@@ -67,10 +67,21 @@ export class ExportService {
     const totalExclusionHours = exclusionDetails.reduce((sum, d) => sum + d.hours, 0);
     const totalExclusionCost = exclusionDetails.reduce((sum, d) => sum + d.cost, 0);
 
+    // Check if client has subscription coverage for exclusions
+    const coverageResult = await query(
+      `SELECT has_subscription_coverage 
+       FROM clients 
+       WHERE id = $1`,
+      [clientId]
+    );
+    
+    // Default to false if not explicitly set (safer for billing)
+    const coveredBySubscription = coverageResult.rows[0]?.has_subscription_coverage || false;
+
     const exclusionsSummary: ExclusionSummary = {
       totalHours: totalExclusionHours,
       totalCost: totalExclusionCost,
-      coveredBySubscription: true, // This would be determined by contract rules
+      coveredBySubscription, // Now dynamically determined from client settings
       details: exclusionDetails,
     };
 

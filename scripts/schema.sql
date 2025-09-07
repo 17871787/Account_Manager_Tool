@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS clients (
     harvest_id VARCHAR(100),
     sft_id VARCHAR(100),
     hubspot_id VARCHAR(100),
+    has_subscription_coverage BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
