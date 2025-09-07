@@ -1,6 +1,7 @@
 module.exports = {
   ci: {
     collect: {
+      // Build is handled in CI prior to Lighthouse; simply start the server.
       startServerCommand: 'next start',
       startServerReadyPattern: 'ready on',
       startServerReadyTimeout: 30000,
