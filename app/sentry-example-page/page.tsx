@@ -11,7 +11,7 @@ export default function SentryExamplePage() {
   };
 
   const triggerTypeError = () => {
-    // @ts-ignore - Intentional error for testing
+    // @ts-expect-error - Intentional error for testing
     myUndefinedFunction();
   };
 
@@ -29,7 +29,7 @@ export default function SentryExamplePage() {
 
   const captureException = () => {
     try {
-      // @ts-ignore
+      // @ts-expect-error
       const result = someUndefinedVariable.property;
     } catch (error) {
       Sentry.captureException(error);
@@ -91,7 +91,7 @@ export default function SentryExamplePage() {
               Send Test Message
             </button>
             <p className="mt-2 text-sm text-gray-500">
-              Sends an info message to Sentry (won't crash app)
+              Sends an info message to Sentry (won&apos;t crash app)
             </p>
           </div>
 
