@@ -2,11 +2,13 @@ import { sentryErrorMiddleware } from '../sentry';
 import type { AppError } from '../../types';
 
 const captureException = jest.fn();
-const withScope = jest.fn((callback: any) => callback({ setContext: jest.fn() }));
+const withScope = jest.fn((callback: unknown) =>
+  (callback as (scope: { setContext: jest.Mock }) => void)({ setContext: jest.fn() })
+);
 
 jest.mock('@sentry/nextjs', () => ({
-  captureException: (...args: any[]) => captureException(...args),
-  withScope: (...args: any[]) => withScope(...args),
+  captureException: (...args: unknown[]) => captureException(...args),
+  withScope: (...args: unknown[]) => withScope(...args),
 }));
 
 describe('sentryErrorMiddleware', () => {
