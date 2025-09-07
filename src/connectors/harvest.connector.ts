@@ -8,6 +8,7 @@ import {
   HarvestUser,
 } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { captureException } from '../utils/sentry';
 
 export class HarvestConnector {
   private client: AxiosInstance;
@@ -60,7 +61,13 @@ export class HarvestConnector {
 
       return allEntries;
     } catch (error) {
-      console.error('Error fetching Harvest time entries:', error);
+      captureException(error, {
+        operation: 'HarvestConnector.getTimeEntries',
+        fromDate,
+        toDate,
+        clientId,
+        projectId,
+      });
       throw error;
     }
   }
@@ -78,7 +85,10 @@ export class HarvestConnector {
         isActive: p.is_active,
       }));
     } catch (error) {
-      console.error('Error fetching Harvest projects:', error);
+      captureException(error, {
+        operation: 'HarvestConnector.getProjects',
+        isActive,
+      });
       throw error;
     }
   }
@@ -94,7 +104,10 @@ export class HarvestConnector {
         isActive: c.is_active,
       }));
     } catch (error) {
-      console.error('Error fetching Harvest clients:', error);
+      captureException(error, {
+        operation: 'HarvestConnector.getClients',
+        isActive,
+      });
       throw error;
     }
   }
@@ -112,7 +125,9 @@ export class HarvestConnector {
         isActive: t.is_active,
       }));
     } catch (error) {
-      console.error('Error fetching Harvest tasks:', error);
+      captureException(error, {
+        operation: 'HarvestConnector.getTasks',
+      });
       throw error;
     }
   }
@@ -130,7 +145,10 @@ export class HarvestConnector {
         isActive: u.is_active,
       }));
     } catch (error) {
-      console.error('Error fetching Harvest users:', error);
+      captureException(error, {
+        operation: 'HarvestConnector.getUsers',
+        isActive,
+      });
       throw error;
     }
   }
@@ -148,7 +166,10 @@ export class HarvestConnector {
         budgetIsMonthly: response.data.project.budget_is_monthly,
       };
     } catch (error) {
-      console.error('Error fetching project budget:', error);
+      captureException(error, {
+        operation: 'HarvestConnector.getProjectBudget',
+        projectId,
+      });
       throw error;
     }
   }
@@ -188,7 +209,9 @@ export class HarvestConnector {
       await this.client.get('/company');
       return true;
     } catch (error) {
-      console.error('Harvest connection test failed:', error);
+      captureException(error, {
+        operation: 'HarvestConnector.testConnection',
+      });
       return false;
     }
   }
