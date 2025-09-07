@@ -81,7 +81,7 @@ export class ExceptionEngineOptimized {
       const applicableRate = this.findApplicableRate(ratePolicies, entry.date);
       if (applicableRate) {
         const expectedRate = parseFloat(applicableRate.rate);
-        const actualRate = parseFloat(entry.billableRate);
+        const actualRate = entry.billableRate;
         const variance = Math.abs(expectedRate - actualRate);
         
         if (variance > 0.01) {
@@ -181,7 +181,7 @@ export class ExceptionEngineOptimized {
       }
 
       // Check missing rate
-      if (!entry.billableRate || parseFloat(entry.billableRate) === 0) {
+      if (!entry.billableRate || entry.billableRate === 0) {
         exceptions.push({
           id: uuidv4(),
           type: 'missing_rate',

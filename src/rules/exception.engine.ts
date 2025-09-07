@@ -172,6 +172,8 @@ export class ExceptionEngine {
             severity: exception.severity as any,
             description: exception.description,
             suggestedAction: exception.suggestedAction,
+            entityType: 'time_entry',
+            entityId: entry.id,
             status: 'pending',
           });
         }

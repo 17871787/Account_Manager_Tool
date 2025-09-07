@@ -101,15 +101,19 @@ export interface ProfitabilityMetric {
 
 export interface Exception {
   id: string;
-  entryId: string;
+  entryId?: string;
   type: 'rate_mismatch' | 'billable_conflict' | 'budget_breach' | 'deprecated_task' | 'missing_rate';
   severity: 'high' | 'medium' | 'low';
   description: string;
   suggestedAction: string;
+  entityType: 'time_entry' | 'project';
+  entityId: string;
   status: 'pending' | 'approved' | 'rejected';
   reviewedBy?: string;
   reviewedAt?: Date;
   helpdeskTicketId?: string;
+  metadata?: Record<string, any>;
+  createdAt?: Date;
 }
 
 export interface BudgetTracking {
