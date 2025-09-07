@@ -105,10 +105,12 @@ export class ExceptionEngine {
         );
         
         if (!budgetResult.rows[0]) return null;
-        
+
         const budget = budgetResult.rows[0];
-        const utilizationRate = budget.budget_hours ? 
-          (parseFloat(budget.total_hours) / parseFloat(budget.budget_hours)) * 100 : 0;
+        const budgetHours = parseFloat(budget.budget_hours);
+        const totalHours = parseFloat(budget.total_hours ?? '0');
+        const totalCost = parseFloat(budget.total_cost ?? '0');
+        const utilizationRate = budgetHours ? (totalHours / budgetHours) * 100 : 0;
         
         if (utilizationRate > 90) {
           return {
@@ -120,9 +122,9 @@ export class ExceptionEngine {
               'Approaching budget limit - monitor closely',
             metadata: {
               utilizationRate,
-              budgetHours: parseFloat(budget.budget_hours),
-              totalHours: parseFloat(budget.total_hours),
-              totalCost: parseFloat(budget.total_cost),
+              budgetHours,
+              totalHours,
+              totalCost,
             },
           };
         }
