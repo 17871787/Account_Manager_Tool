@@ -2,6 +2,44 @@ import axios, { AxiosInstance } from 'axios';
 import { HarvestTimeEntry, HarvestTimeEntryApiResponse } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
+export interface HarvestProject {
+  id: number;
+  name: string;
+  code?: string | null;
+  is_active: boolean;
+  client?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface HarvestClient {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+export interface HarvestTask {
+  id: number;
+  name: string;
+  billable_by_default: boolean;
+  is_active: boolean;
+}
+
+export interface HarvestUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  is_active: boolean;
+}
+
+export interface HarvestProjectBudget {
+  budget: number;
+  budgetBy: string;
+  budgetIsMonthly: boolean;
+}
+
 export class HarvestConnector {
   private client: AxiosInstance;
   private accountId: string;
@@ -58,9 +96,9 @@ export class HarvestConnector {
     }
   }
 
-  async getProjects(isActive = true): Promise<unknown[]> {
+  async getProjects(isActive = true): Promise<HarvestProject[]> {
     try {
-      const response = await this.client.get('/projects', {
+      const response = await this.client.get<{ projects: HarvestProject[] }>('/projects', {
         params: { is_active: isActive, per_page: 100 },
       });
       return response.data.projects;
@@ -70,9 +108,9 @@ export class HarvestConnector {
     }
   }
 
-  async getClients(isActive = true): Promise<unknown[]> {
+  async getClients(isActive = true): Promise<HarvestClient[]> {
     try {
-      const response = await this.client.get('/clients', {
+      const response = await this.client.get<{ clients: HarvestClient[] }>('/clients', {
         params: { is_active: isActive, per_page: 100 },
       });
       return response.data.clients;
@@ -82,9 +120,9 @@ export class HarvestConnector {
     }
   }
 
-  async getTasks(): Promise<unknown[]> {
+  async getTasks(): Promise<HarvestTask[]> {
     try {
-      const response = await this.client.get('/tasks', {
+      const response = await this.client.get<{ tasks: HarvestTask[] }>('/tasks', {
         params: { per_page: 100 },
       });
       return response.data.tasks;
@@ -94,9 +132,9 @@ export class HarvestConnector {
     }
   }
 
-  async getUsers(isActive = true): Promise<unknown[]> {
+  async getUsers(isActive = true): Promise<HarvestUser[]> {
     try {
-      const response = await this.client.get('/users', {
+      const response = await this.client.get<{ users: HarvestUser[] }>('/users', {
         params: { is_active: isActive, per_page: 100 },
       });
       return response.data.users;
@@ -106,9 +144,11 @@ export class HarvestConnector {
     }
   }
 
-  async getProjectBudget(projectId: string): Promise<any> {
+  async getProjectBudget(projectId: string): Promise<HarvestProjectBudget> {
     try {
-      const response = await this.client.get(`/projects/${projectId}`);
+      const response = await this.client.get<{
+        project: { budget: number; budget_by: string; budget_is_monthly: boolean };
+      }>(`/projects/${projectId}`);
       return {
         budget: response.data.project.budget,
         budgetBy: response.data.project.budget_by,

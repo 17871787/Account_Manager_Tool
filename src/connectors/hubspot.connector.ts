@@ -27,6 +27,20 @@ export interface HubSpotCompany {
   };
 }
 
+export interface HubSpotAssociation {
+  id: string;
+  type?: string;
+}
+
+export interface HubSpotRevenueMetrics {
+  companyName: string;
+  annualRevenue: number;
+  closedRevenue: number;
+  pipelineValue: number;
+  dealCount: number;
+  closedDealCount: number;
+}
+
 export class HubSpotConnector {
   private client: AxiosInstance;
 
@@ -42,12 +56,16 @@ export class HubSpotConnector {
 
   async getDeals(limit = 100): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/deals', {
-        params: {
-          limit,
-          properties: 'dealname,amount,closedate,dealstage,pipeline,hs_arr,hs_mrr,hs_tcv,hs_acv',
-        },
-      });
+      const response = await this.client.get<{ results: HubSpotDeal[] }>(
+        '/crm/v3/objects/deals',
+        {
+          params: {
+            limit,
+            properties:
+              'dealname,amount,closedate,dealstage,pipeline,hs_arr,hs_mrr,hs_tcv,hs_acv',
+          },
+        }
+      );
       return response.data.results;
     } catch (error) {
       console.error('Error fetching HubSpot deals:', error);
@@ -57,12 +75,16 @@ export class HubSpotConnector {
 
   async getCompanies(limit = 100): Promise<HubSpotCompany[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/companies', {
-        params: {
-          limit,
-          properties: 'name,domain,industry,annualrevenue,numberofemployees,lifecyclestage',
-        },
-      });
+      const response = await this.client.get<{ results: HubSpotCompany[] }>(
+        '/crm/v3/objects/companies',
+        {
+          params: {
+            limit,
+            properties:
+              'name,domain,industry,annualrevenue,numberofemployees,lifecyclestage',
+          },
+        }
+      );
       return response.data.results;
     } catch (error) {
       console.error('Error fetching HubSpot companies:', error);
@@ -72,16 +94,21 @@ export class HubSpotConnector {
 
   async getDealsByCompany(companyId: string): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get(`/crm/v3/objects/companies/${companyId}/associations/deals`);
-      const dealIds = response.data.results.map((r: any) => r.id);
-      
+      const response = await this.client.get<{ results: HubSpotAssociation[] }>(
+        `/crm/v3/objects/companies/${companyId}/associations/deals`
+      );
+      const dealIds = response.data.results.map(r => r.id);
+
       if (dealIds.length === 0) return [];
-      
-      const dealsResponse = await this.client.post('/crm/v3/objects/deals/batch/read', {
-        inputs: dealIds.map((id: string) => ({ id })),
-        properties: ['dealname', 'amount', 'closedate', 'dealstage', 'pipeline'],
-      });
-      
+
+      const dealsResponse = await this.client.post<{ results: HubSpotDeal[] }>(
+        '/crm/v3/objects/deals/batch/read',
+        {
+          inputs: dealIds.map((id: string) => ({ id })),
+          properties: ['dealname', 'amount', 'closedate', 'dealstage', 'pipeline'],
+        }
+      );
+
       return dealsResponse.data.results;
     } catch (error) {
       console.error('Error fetching deals by company:', error);
@@ -89,19 +116,22 @@ export class HubSpotConnector {
     }
   }
 
-  async getRevenueMetrics(companyName: string): Promise<any> {
+  async getRevenueMetrics(companyName: string): Promise<HubSpotRevenueMetrics | null> {
     try {
       // Search for company by name
-      const searchResponse = await this.client.post('/crm/v3/objects/companies/search', {
-        filterGroups: [{
-          filters: [{
-            propertyName: 'name',
-            operator: 'EQ',
-            value: companyName,
-          }],
+      const searchResponse = await this.client.post<{ results: HubSpotCompany[] }>(
+        '/crm/v3/objects/companies/search',
+        {
+          filterGroups: [{
+            filters: [{
+              propertyName: 'name',
+              operator: 'EQ',
+              value: companyName,
+            }],
         }],
-        properties: ['name', 'annualrevenue'],
-      });
+          properties: ['name', 'annualrevenue'],
+        }
+      );
 
       if (searchResponse.data.results.length === 0) {
         return null;
