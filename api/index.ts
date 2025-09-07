@@ -5,6 +5,9 @@ import routes from '../src/api/routes';
 
 const app = express();
 
+// Sentry v8 doesn't have these middleware for Express
+// They're automatically handled by the SDK initialization
+
 // Middleware
 app.use(cors());
 app.use(express.json());

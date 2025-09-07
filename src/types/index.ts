@@ -109,6 +109,7 @@ export interface Exception {
   entityType: 'time_entry' | 'project';
   entityId: string;
   status: 'pending' | 'approved' | 'rejected';
+  createdAt: Date;
   reviewedBy?: string;
   reviewedAt?: Date;
   helpdeskTicketId?: string;
