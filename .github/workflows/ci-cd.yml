@@ -58,7 +58,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-next-
 
-      - name: Build application
+      - name: Build application and API
         run: npm run build
 
 #  Lighthouse CI Testing (disabled until credentials are configured)
