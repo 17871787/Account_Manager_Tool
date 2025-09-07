@@ -131,6 +131,13 @@ jobs:
           name: coverage
           path: coverage
 
+      - name: Verify coverage report
+        run: |
+          if [ ! -f coverage/lcov.info ]; then
+            echo "coverage/lcov.info not found"
+            exit 1
+          fi
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
