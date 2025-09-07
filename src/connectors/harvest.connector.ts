@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { HarvestTimeEntry } from '../types';
+import { HarvestTimeEntry, HarvestTimeEntryApiResponse } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 export class HarvestConnector {
@@ -127,7 +127,7 @@ export class HarvestConnector {
     return this.getTimeEntries(fromDate, toDate, clientId);
   }
 
-  private mapTimeEntry(entry: any): HarvestTimeEntry {
+  private mapTimeEntry(entry: HarvestTimeEntryApiResponse): HarvestTimeEntry {
     return {
       entryId: entry.id.toString(),
       date: new Date(entry.spent_date),

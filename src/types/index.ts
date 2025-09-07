@@ -198,3 +198,34 @@ export interface MonthlyReport {
   projects: MonthlyReportProject[];
   generatedAt: Date;
 }
+
+export interface TimeEntryRecord {
+  id: string;
+  person_id: string;
+  client_id: string;
+  project_id: string;
+  task_id: string;
+  date: Date;
+  hours: number;
+  billable_rate: number;
+  cost_rate: number;
+  billable_flag: boolean;
+  task_name?: string;
+}
+
+export interface HarvestTimeEntryApiResponse {
+  id: number;
+  spent_date: string;
+  client?: { name: string };
+  project?: { name: string };
+  task?: { name: string };
+  notes?: string;
+  hours: number;
+  billable: boolean;
+  is_locked: boolean;
+  user?: { first_name: string; last_name: string };
+  user_assignment?: { role: string };
+  billable_rate?: number;
+  cost_rate?: number;
+  external_reference?: { id: string };
+}
