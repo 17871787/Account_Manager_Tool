@@ -169,7 +169,7 @@ export class ExceptionEngineOptimized {
             description: `Project at ${utilization.toFixed(1)}% of budget`,
             suggestedAction: utilization >= 100 ? 'Stop work or request budget extension' : 'Alert PM about approaching limit',
             entityType: 'project',
-            entityId: entry.projectId,
+            entityId: entry.project,
             status: 'pending',
             createdAt: new Date(),
             metadata: {
@@ -182,7 +182,7 @@ export class ExceptionEngineOptimized {
       }
 
       // Check missing rate
-      if (!entry.billableRate || parseFloat(entry.billableRate) === 0) {
+      if (!entry.billableRate || parseFloat(entry.billableRate.toString()) === 0) {
         exceptions.push({
           id: uuidv4(),
           type: 'missing_rate',
@@ -194,8 +194,8 @@ export class ExceptionEngineOptimized {
           status: 'pending',
           createdAt: new Date(),
           metadata: {
-            personId: entry.personId,
-            clientId: entry.clientId
+            person: `${entry.firstName} ${entry.lastName}`,
+            client: entry.client
           }
         });
       }
@@ -208,8 +208,8 @@ export class ExceptionEngineOptimized {
   private findApplicableRate(ratePolicies: any[], date: Date): any {
     // Find the most recent rate policy before or on the given date
     return ratePolicies
-      .filter(rp => new Date(rp.effective_date) <= date)
-      .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0];
+      .filter(rp => new Date(rp.effective_from || rp.effective_date) <= date)
+      .sort((a, b) => new Date(b.effective_from || b.effective_date).getTime() - new Date(a.effective_from || a.effective_date).getTime())[0];
   }
 
   private deduplicateExceptions(exceptions: Exception[]): Exception[] {
