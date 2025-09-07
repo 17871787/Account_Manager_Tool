@@ -1,8 +1,9 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import routes from './api/routes';
 import { pool } from './models/database';
+import { AppError } from './types';
 
 dotenv.config();
 
@@ -18,9 +19,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', routes);
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
   console.error('Error:', err);
-  res.status(err.status || 500).json({
+  res.status(err.status ?? 500).json({
     error: err.message || 'Internal server error',
     timestamp: new Date(),
   });

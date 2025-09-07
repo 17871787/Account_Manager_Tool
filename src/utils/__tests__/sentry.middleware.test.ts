@@ -24,7 +24,7 @@ describe('sentryErrorMiddleware', () => {
   };
 
   const finalHandler = (err: AppError) => {
-    res.status(err.status || 500).json({
+    res.status(err.status ?? 500).json({
       error: err.message || 'Internal server error',
       timestamp: new Date(),
       errorId: res.locals.sentryId,

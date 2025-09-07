@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import routes from '../src/api/routes';
 import { sentryErrorMiddleware } from '../src/utils/sentry';
@@ -45,21 +45,14 @@ app.use('/api', routes);
 app.use(sentryErrorMiddleware);
 
 // Error handling
-app.use(
-  (
-    err: AppError,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error('Error:', err);
+app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
+  console.error('Error:', err);
 
-    res.status(err.status || 500).json({
-      error: err.message || 'Internal server error',
-      timestamp: new Date(),
-      errorId: res.locals.sentryId, // Include Sentry error ID for tracking
-    });
-  }
-);
+  res.status(err.status ?? 500).json({
+    error: err.message || 'Internal server error',
+    timestamp: new Date(),
+    errorId: res.locals.sentryId, // Include Sentry error ID for tracking
+  });
+});
 
 export default app;
