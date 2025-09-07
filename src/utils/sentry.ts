@@ -24,7 +24,7 @@ export const sentryErrorMiddleware = (
 // Helper to capture exceptions with additional context
 export const captureException = (
   error: Error | unknown,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ) => {
   Sentry.withScope((scope) => {
     if (context) {
@@ -38,7 +38,7 @@ export const captureException = (
 export const captureMessage = (
   message: string,
   level: Sentry.SeverityLevel = 'info',
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ) => {
   Sentry.withScope((scope) => {
     if (context) {
@@ -84,7 +84,7 @@ export const setUserContext = (user: {
 export const addBreadcrumb = (
   message: string,
   category: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ) => {
   Sentry.addBreadcrumb({
     message,

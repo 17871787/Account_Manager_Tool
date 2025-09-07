@@ -106,7 +106,11 @@ export class HarvestConnector {
     }
   }
 
-  async getProjectBudget(projectId: string): Promise<any> {
+  async getProjectBudget(projectId: string): Promise<{
+    budget: number;
+    budgetBy: string;
+    budgetIsMonthly: boolean;
+  }> {
     try {
       const response = await this.client.get(`/projects/${projectId}`);
       return {
