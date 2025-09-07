@@ -4,27 +4,37 @@ import path from 'path';
 
 async function runMigration() {
   console.log('🔄 Starting database migration...');
-  
+
+  let exitCode = 0;
+
   try {
     // Read schema file
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
-    
+
     // Execute schema
     await pool.query(schema);
-    
+
     console.log('✅ Database schema created successfully');
-    
+
     // Insert sample data (optional)
     if (process.argv.includes('--seed')) {
       await seedDatabase();
     }
-    
+
     console.log('✅ Migration completed successfully');
-    process.exit(0);
   } catch (error) {
     console.error('❌ Migration failed:', error);
-    process.exit(1);
+    exitCode = 1;
+  } finally {
+    try {
+      await pool.end();
+    } catch (closeError) {
+      console.error('❌ Failed to close database pool:', closeError);
+      exitCode = 1;
+    }
+
+    process.exit(exitCode);
   }
 }
 
