@@ -30,13 +30,13 @@ export const mockTimeEntries = [
     },
     client: {
       id: 8348295,
-      name: 'TechCorp Solutions',
-      currency: 'USD',
+      name: 'Arla',
+      currency: 'GBP',
     },
     project: {
       id: 30827502,
-      name: 'Q1 Platform Upgrade',
-      code: 'TC-2024-Q1',
+      name: 'Q1 Digital Transformation',
+      code: 'ARLA-2024-Q1',
     },
     task: {
       id: 16197516,
@@ -94,13 +94,13 @@ export const mockTimeEntries = [
     },
     client: {
       id: 8348295,
-      name: 'TechCorp Solutions',
-      currency: 'USD',
+      name: 'Arla',
+      currency: 'GBP',
     },
     project: {
       id: 30827502,
-      name: 'Q1 Platform Upgrade',
-      code: 'TC-2024-Q1',
+      name: 'Q1 Digital Transformation',
+      code: 'ARLA-2024-Q1',
     },
     task: {
       id: 16197516,
@@ -158,13 +158,13 @@ export const mockTimeEntries = [
     },
     client: {
       id: 8348295,
-      name: 'TechCorp Solutions',
-      currency: 'USD',
+      name: 'Arla',
+      currency: 'GBP',
     },
     project: {
       id: 30827502,
-      name: 'Q1 Platform Upgrade',
-      code: 'TC-2024-Q1',
+      name: 'Q1 Digital Transformation',
+      code: 'ARLA-2024-Q1',
     },
     task: {
       id: 16197517,
@@ -220,13 +220,13 @@ export const mockTimeEntries = [
     },
     client: {
       id: 8348296,
-      name: 'DataFlow Inc',
-      currency: 'USD',
+      name: 'Saputo',
+      currency: 'GBP',
     },
     project: {
       id: 30827503,
-      name: 'Performance Optimization',
-      code: 'DF-2024-01',
+      name: 'Process Automation',
+      code: 'SAP-2024-01',
     },
     task: {
       id: 16197518,
@@ -261,7 +261,7 @@ export const mockHubSpotDeals = [
   {
     id: '12029089094',
     properties: {
-      dealname: 'Q1 Platform Upgrade - TechCorp',
+      dealname: 'Q1 Digital Transformation - Arla',
       amount: '50000',
       closedate: '2024-03-31T00:00:00Z',
       pipeline: 'default',
@@ -284,7 +284,7 @@ export const mockHubSpotDeals = [
   {
     id: '12029089095',
     properties: {
-      dealname: 'Performance Optimization - DataFlow',
+      dealname: 'Process Automation - Saputo',
       amount: '25000',
       closedate: '2024-02-29T00:00:00Z',
       pipeline: 'default',
@@ -311,9 +311,9 @@ export const mockHubSpotCompanies = [
   {
     id: '11381275319',
     properties: {
-      name: 'TechCorp Solutions',
-      domain: 'techcorp.com',
-      industry: 'Technology',
+      name: 'Arla',
+      domain: 'arla.com',
+      industry: 'Dairy & Food Production',
       numberofemployees: '500',
       annualrevenue: '50000000',
       city: 'San Francisco',
@@ -325,9 +325,9 @@ export const mockHubSpotCompanies = [
   {
     id: '11381275320',
     properties: {
-      name: 'DataFlow Inc',
-      domain: 'dataflow.io',
-      industry: 'Data Analytics',
+      name: 'Saputo',
+      domain: 'saputo.com',
+      industry: 'Dairy Products',
       numberofemployees: '200',
       annualrevenue: '20000000',
       city: 'New York',
@@ -341,10 +341,13 @@ export const mockHubSpotCompanies = [
 // Generate profitability data
 export const generateProfitabilityData = () => {
   const clients = [
-    { id: '8348295', name: 'TechCorp Solutions', budget: 50000, spent: 35000, hours: 200 },
-    { id: '8348296', name: 'DataFlow Inc', budget: 25000, spent: 12000, hours: 60 },
-    { id: '8348297', name: 'CloudScale Systems', budget: 75000, spent: 68000, hours: 400 },
-    { id: '8348298', name: 'FinanceHub', budget: 30000, spent: 28500, hours: 150 },
+    { id: '8348295', name: 'Arla', budget: 85000, spent: 72000, hours: 320 },
+    { id: '8348296', name: 'Saputo', budget: 65000, spent: 48000, hours: 240 },
+    { id: '8348297', name: 'Aldi', budget: 120000, spent: 95000, hours: 480 },
+    { id: '8348298', name: 'Long Clawson', budget: 45000, spent: 38500, hours: 180 },
+    { id: '8348299', name: 'Crediton', budget: 55000, spent: 42000, hours: 210 },
+    { id: '8348300', name: 'Lactalis', budget: 95000, spent: 78000, hours: 390 },
+    { id: '8348301', name: 'Leprino', budget: 75000, spent: 62000, hours: 310 },
   ];
 
   return clients.map(client => ({
@@ -366,35 +369,35 @@ export const generateExceptions = () => [
     id: '1',
     type: 'budget_breach',
     severity: 'high',
-    clientName: 'CloudScale Systems',
-    projectName: 'Infrastructure Migration',
+    clientName: 'Aldi',
+    projectName: 'Supply Chain Optimization',
     description: 'Project has exceeded 90% of allocated budget with 2 weeks remaining',
     suggestedAction: 'Review scope or request budget increase',
-    amount: 68000,
-    budget: 75000,
+    amount: 95000,
+    budget: 120000,
     createdAt: new Date().toISOString(),
   },
   {
     id: '2',
     type: 'rate_mismatch',
     severity: 'medium',
-    clientName: 'TechCorp Solutions',
-    projectName: 'Q1 Platform Upgrade',
-    description: 'Billing rate ($175) differs from contract rate ($200)',
+    clientName: 'Arla',
+    projectName: 'Q1 Digital Transformation',
+    description: 'Billing rate (£145) differs from contract rate (£165)',
     suggestedAction: 'Update billing rate in Harvest',
-    amount: 175,
-    expectedAmount: 200,
+    amount: 145,
+    expectedAmount: 165,
     createdAt: new Date().toISOString(),
   },
   {
     id: '3',
     type: 'unbilled_hours',
     severity: 'medium',
-    clientName: 'DataFlow Inc',
-    projectName: 'Performance Optimization',
-    description: '24 hours from last week not yet invoiced',
+    clientName: 'Saputo',
+    projectName: 'Process Automation',
+    description: '32 hours from last week not yet invoiced',
     suggestedAction: 'Create invoice for pending hours',
-    hours: 24,
+    hours: 32,
     amount: 4800,
     createdAt: subDays(new Date(), 2).toISOString(),
   },
@@ -402,8 +405,8 @@ export const generateExceptions = () => [
     id: '4',
     type: 'low_utilization',
     severity: 'low',
-    clientName: 'FinanceHub',
-    projectName: 'API Integration',
+    clientName: 'Crediton',
+    projectName: 'ERP Integration',
     description: 'Team utilization at 65% for the past week',
     suggestedAction: 'Review resource allocation',
     utilization: 65,

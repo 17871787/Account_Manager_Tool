@@ -216,14 +216,14 @@ export default function Dashboard() {
       <Grid columns="4" gap="4" className="mb-8">
         <MetricCard
           title="Total Revenue"
-          value={`$${totalRevenue.toLocaleString()}`}
+          value={`£${totalRevenue.toLocaleString()}`}
           change="+12.5% from last period"
           icon={DollarSign}
           trend="up"
         />
         <MetricCard
           title="Net Profit"
-          value={`$${totalProfit.toLocaleString()}`}
+          value={`£${totalProfit.toLocaleString()}`}
           change="+8.3% from last period"
           icon={TrendingUp}
           trend="up"
@@ -313,7 +313,7 @@ export default function Dashboard() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
+                    <Tooltip formatter={(value: any) => `£${value.toLocaleString()}`} />
                   </PieChart>
                 </ResponsiveContainer>
               </Card>
@@ -347,13 +347,13 @@ export default function Dashboard() {
                             <Text weight="medium">{client.clientName}</Text>
                           </td>
                           <td className="text-right py-3">
-                            <Text color="green">${client.totalRevenue.toLocaleString()}</Text>
+                            <Text color="green">£{client.totalRevenue.toLocaleString()}</Text>
                           </td>
                           <td className="text-right py-3">
-                            <Text color="red">${client.totalCost.toLocaleString()}</Text>
+                            <Text color="red">£{client.totalCost.toLocaleString()}</Text>
                           </td>
                           <td className="text-right py-3">
-                            <Text weight="medium">${profit.toLocaleString()}</Text>
+                            <Text weight="medium">£{profit.toLocaleString()}</Text>
                           </td>
                           <td className="text-right py-3">
                             <Badge color={parseFloat(client.profitMargin) > 50 ? 'green' : 'orange'}>
@@ -378,7 +378,7 @@ export default function Dashboard() {
                             {client.hoursWorked}
                           </td>
                           <td className="text-right py-3">
-                            ${client.averageRate}/hr
+                            £{client.averageRate}/hr
                           </td>
                         </tr>
                       );
@@ -465,11 +465,11 @@ export default function Dashboard() {
                       <Heading size="4">{client.clientName}</Heading>
                       <Flex justify="between">
                         <Text size="2" color="gray">Revenue</Text>
-                        <Text size="2" weight="bold">${client.totalRevenue.toLocaleString()}</Text>
+                        <Text size="2" weight="bold">£{client.totalRevenue.toLocaleString()}</Text>
                       </Flex>
                       <Flex justify="between">
                         <Text size="2" color="gray">Profit</Text>
-                        <Text size="2" weight="bold" color="green">${profit.toLocaleString()}</Text>
+                        <Text size="2" weight="bold" color="green">£{profit.toLocaleString()}</Text>
                       </Flex>
                       <Flex justify="between">
                         <Text size="2" color="gray">Margin</Text>
