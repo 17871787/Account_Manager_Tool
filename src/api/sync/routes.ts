@@ -21,11 +21,23 @@ export default function createSyncRouter({
   const router = Router();
 
   router.post('/sync/harvest', async (req: Request, res: Response) => {
-    const connector = harvestConnector ?? new HarvestConnector();
+    let connector: HarvestConnector;
     let fromDate: string;
     let toDate: string;
     let clientId: string | undefined;
     try {
+      if (harvestConnector) {
+        connector = harvestConnector;
+      } else {
+        const required = ['HARVEST_ACCESS_TOKEN', 'HARVEST_ACCOUNT_ID'];
+        const missing = required.filter((v) => !process.env[v]);
+        if (missing.length) {
+          return res
+            .status(500)
+            .json({ error: `Missing environment variables: ${missing.join(', ')}` });
+        }
+        connector = new HarvestConnector();
+      }
       const schema = z.object({
         fromDate: z
           .string()
@@ -103,8 +115,20 @@ export default function createSyncRouter({
   });
 
 router.post('/sync/hubspot', async (req: Request, res: Response) => {
-  const connector = hubspotConnector ?? new HubSpotConnector();
+  let connector: HubSpotConnector;
   try {
+    if (hubspotConnector) {
+      connector = hubspotConnector;
+    } else {
+      const required = ['HUBSPOT_API_KEY'];
+      const missing = required.filter((v) => !process.env[v]);
+      if (missing.length) {
+        return res
+          .status(500)
+          .json({ error: `Missing environment variables: ${missing.join(', ')}` });
+      }
+      connector = new HubSpotConnector();
+    }
     z.object({}).parse(req.body);
     const result = await connector.syncRevenueData();
 
@@ -126,9 +150,21 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
 });
 
   router.post('/sync/sft', async (req: Request, res: Response) => {
-    const connector = sftConnector ?? new SFTConnector();
+    let connector: SFTConnector;
     let monthStr: string | undefined;
     try {
+      if (sftConnector) {
+        connector = sftConnector;
+      } else {
+        const required = ['MS_TENANT_ID', 'MS_CLIENT_ID', 'MS_CLIENT_SECRET'];
+        const missing = required.filter((v) => !process.env[v]);
+        if (missing.length) {
+          return res
+            .status(500)
+            .json({ error: `Missing environment variables: ${missing.join(', ')}` });
+        }
+        connector = new SFTConnector();
+      }
       const schema = z.object({ month: z.string().optional() });
       const { month } = schema.parse(req.body);
       monthStr = month ?? new Date().toISOString().slice(0, 7);
