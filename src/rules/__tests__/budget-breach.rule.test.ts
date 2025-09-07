@@ -27,10 +27,30 @@ describe('budget_breach rule', () => {
 
   it('defaults null total_cost to 0', async () => {
     (query as jest.Mock)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'task1',
+            category: 'billable',
+            default_billable: true,
+            is_active: true,
+            name: 'Task',
+          },
+        ],
+      })
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ category: 'billable', default_billable: true }] })
-      .mockResolvedValueOnce({ rows: [{ budget: 1000, budget_hours: '100', total_hours: '95', total_cost: null }] })
-      .mockResolvedValueOnce({ rows: [{ is_active: true, name: 'Task' }] });
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            project_id: 'project1',
+            month: new Date('2023-01-01'),
+            budget: 1000,
+            budget_hours: '100',
+            total_hours: '95',
+            total_cost: null,
+          },
+        ],
+      });
 
     const engine = new ExceptionEngine();
     const exceptions = await engine.detectExceptions([entry]);
@@ -44,10 +64,30 @@ describe('budget_breach rule', () => {
 
   it('handles null total_hours gracefully', async () => {
     (query as jest.Mock)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'task1',
+            category: 'billable',
+            default_billable: true,
+            is_active: true,
+            name: 'Task',
+          },
+        ],
+      })
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ category: 'billable', default_billable: true }] })
-      .mockResolvedValueOnce({ rows: [{ budget: 1000, budget_hours: '100', total_hours: null, total_cost: '1000' }] })
-      .mockResolvedValueOnce({ rows: [{ is_active: true, name: 'Task' }] });
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            project_id: 'project1',
+            month: new Date('2023-01-01'),
+            budget: 1000,
+            budget_hours: '100',
+            total_hours: null,
+            total_cost: '1000',
+          },
+        ],
+      });
 
     const engine = new ExceptionEngine();
     const exceptions = await engine.detectExceptions([entry]);
