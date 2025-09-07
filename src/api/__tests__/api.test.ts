@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../../../api/index';
+import app from '../../app';
 import { setPool } from '../../models/database';
 import { Pool, PoolClient } from 'pg';
 
