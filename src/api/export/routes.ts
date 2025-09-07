@@ -39,7 +39,7 @@ router.post('/export/invoice', async (req: Request, res: Response) => {
 router.post('/export/csv', async (req: Request, res: Response) => {
   try {
     const { invoiceExport } = z.object({ invoiceExport: z.unknown() }).parse(req.body);
-    const csv = await exportService.exportToCSV(invoiceExport);
+    const csv = await exportService.exportToCSV(invoiceExport as InvoiceExport);
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="invoice.csv"');
     res.send(csv);
