@@ -1,8 +1,15 @@
 import express from 'express';
 import cors from 'cors';
+import * as Sentry from '@sentry/nextjs';
 import routes from '../src/api/routes';
 
 const app = express();
+
+// Initialize Sentry request handler (must be first)
+app.use(Sentry.Handlers.requestHandler());
+
+// Enable Sentry tracing
+app.use(Sentry.Handlers.tracingHandler());
 
 // Middleware
 app.use(cors());
@@ -35,12 +42,29 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api', routes);
 
+// Sentry error handler (must be before other error handlers)
+app.use(Sentry.Handlers.errorHandler());
+
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
+  
+  // Add error context to Sentry
+  Sentry.withScope((scope) => {
+    scope.setContext('request', {
+      url: req.url,
+      method: req.method,
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+    });
+    Sentry.captureException(err);
+  });
+  
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error',
     timestamp: new Date(),
+    errorId: res.locals.sentryId, // Include Sentry error ID for tracking
   });
 });
 

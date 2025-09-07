@@ -28,19 +28,16 @@ jobs:
         run: npm ci
       
       - name: Run ESLint
-        run: npm run lint || true
-        continue-on-error: true
+        run: npm run lint
       
       - name: Run TypeScript type checking
-        run: npm run typecheck || true
-        continue-on-error: true
+        run: npm run typecheck
       
       - name: Build application
         run: npm run build
       
       - name: Run unit tests
         run: npm test -- --coverage --passWithNoTests
-        continue-on-error: true
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

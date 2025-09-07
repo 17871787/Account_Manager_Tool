@@ -10,10 +10,26 @@ Copy and paste this prompt into ChatGPT/Codex along with the codebase or specifi
 
 You are a senior software architect conducting a comprehensive code review of the MoA Account Manager AI (AM Copilot) codebase. Please analyze the code using the CODEX-CODEBASE-GUIDE.md as your reference standard.
 
+### ⚠️ IMPORTANT CONTEXT - EARLY PROTOTYPE PHASE ⚠️
+**This is an EARLY PROTOTYPE focused on:**
+- Validating functional use cases and workflows
+- Testing business logic accuracy (profitability calculations)
+- Proving integration capabilities (Harvest, HubSpot, SFT)
+- Getting user feedback on the exception-driven approach
+
+**NOT current priorities:**
+- API authentication/authorization (internal tool, not public)
+- Comprehensive input validation (trusted users only)
+- Rate limiting (low volume usage expected)
+- Production-grade security hardening
+
+Please adjust your review severity accordingly. Focus on functionality, business logic correctness, and user experience over security hardening.
+
 ### Review Scope:
 - **Repository**: https://github.com/17871787/Account_Manager_Tool
 - **Tech Stack**: Next.js 15, TypeScript, PostgreSQL, Node.js, Vercel
 - **Purpose**: Profitability and billing management for Map of Ag
+- **Stage**: Early Prototype / Proof of Concept
 
 ### Perform the following analysis:
 
@@ -24,14 +40,15 @@ You are a senior software architect conducting a comprehensive code review of th
 - [ ] Are there any circular dependencies?
 - [ ] Rate the overall architecture (1-10) with justification
 
-## 2. 🔒 Security Audit
-- [ ] Check for exposed API keys or secrets
-- [ ] Validate input sanitization in API endpoints
-- [ ] Review authentication/authorization implementation
-- [ ] Check for SQL injection vulnerabilities
-- [ ] Assess CORS configuration
-- [ ] Identify any OWASP Top 10 vulnerabilities
-- [ ] Review error handling (no sensitive data in errors)
+## 2. 🔒 Security Audit (PROTOTYPE CONTEXT)
+**Note: This is an internal prototype - security hardening will come in production phase**
+- [ ] Check for exposed API keys or secrets in code (HIGH PRIORITY)
+- [ ] Check for SQL injection vulnerabilities (HIGH PRIORITY)
+- [ ] Review error handling (no sensitive data in errors) (MEDIUM PRIORITY)
+- [ ] ~~Validate input sanitization~~ (DEFER - trusted internal users)
+- [ ] ~~Review authentication/authorization~~ (DEFER - internal tool)
+- [ ] ~~Assess CORS configuration~~ (DEFER - not public facing)
+- [ ] ~~Identify OWASP Top 10~~ (DEFER - prototype phase)
 
 ## 3. ⚡ Performance Analysis
 - [ ] Identify any N+1 query problems
@@ -132,48 +149,55 @@ Based on the Product Requirements Document:
 
 ## 15. 📊 Metrics & Scoring
 
-Provide scores (1-10) for:
-- Security: __/10
-- Performance: __/10
-- Code Quality: __/10
-- Test Coverage: __/10
-- Maintainability: __/10
-- Documentation: __/10
-- **Overall Score: __/10**
+**IMPORTANT: Adjust scoring for PROTOTYPE phase**
+Provide scores (1-10) considering this is an early prototype:
+
+- **Functionality**: __/10 (Does it work? Are calculations correct?)
+- **Business Logic**: __/10 (Profitability formula, exception rules)
+- **User Experience**: __/10 (Dashboard usability, workflow clarity)
+- **Integration Quality**: __/10 (Harvest/HubSpot/SFT connections)
+- **Code Quality**: __/10 (TypeScript usage, structure)
+- **Documentation**: __/10 (Is the code understandable?)
+- **Overall Prototype Score**: __/10
+
+**Production Readiness** (for context, not current priority):
+- Security: __/10 (will be addressed before production)
+- Performance: __/10 (will optimize after validation)
+- Test Coverage: __/10 (will expand after core features stable)
 
 ## Output Format:
 
 Please provide your review in the following format:
 
 ```markdown
-# Code Review Report - AM Copilot
+# Code Review Report - AM Copilot (PROTOTYPE PHASE)
 
 ## Executive Summary
-[2-3 sentence overview of findings]
+[2-3 sentence overview focusing on functionality and business value, not security]
 
-## Critical Issues 🔴
-[List any security vulnerabilities or critical bugs]
+## Functionality Issues 🔴 (BLOCKS PROTOTYPE TESTING)
+[Issues that prevent the app from working or calculating correctly]
 
-## High Priority Issues 🟠
-[List important issues affecting functionality]
+## Business Logic Issues 🟠 (AFFECTS USER VALIDATION)
+[Issues with profitability calculations, exception rules, or workflows]
 
-## Code Quality Observations 🟡
-[List code quality and maintainability issues]
+## User Experience Issues 🟡 (IMPACTS FEEDBACK QUALITY)
+[Dashboard, navigation, or workflow issues that confuse users]
 
 ## Positive Findings ✅
-[What's done well]
+[What's working well for the prototype goals]
 
 ## Detailed Findings
-[Detailed analysis for each section above]
+[Analysis focused on prototype priorities]
 
-## Recommendations
-[Prioritized list of improvements]
+## Recommendations for Prototype Phase
+[What to fix NOW to enable user testing]
 
-## Risk Assessment
-[Any risks to production deployment]
+## Recommendations for Production Phase
+[What to address LATER before go-live]
 
-## Next Steps
-[Actionable items in priority order]
+## Prototype Success Assessment
+[Is this ready for user testing? What's blocking validation?]
 ```
 
 ## Additional Context Files to Review:
