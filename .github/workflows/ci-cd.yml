@@ -51,7 +51,7 @@ jobs:
       - name: Build API
         run: npm run build:api
 
-      - name: Build application
+      - name: Build application for Lighthouse
         run: npm run build
 
   lighthouse:
@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build application
+      - name: Build application for Lighthouse
         run: npm run build
 
       - name: Run Lighthouse CI
