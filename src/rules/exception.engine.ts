@@ -1,4 +1,4 @@
-import { Exception, HarvestTimeEntry } from '../types';
+import { Exception, TimeEntryRecord, RatePolicyRecord } from '../types';
 import { query } from '../models/database';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,7 +14,7 @@ export class ExceptionEngine {
     this.rules.push({
       id: 'rate_mismatch',
       name: 'Rate Mismatch Detection',
-      check: async (entry: any) => {
+      check: async (entry: TimeEntryRecord) => {
         const ratePolicy = await this.getApplicableRate(
           entry.person_id,
           entry.client_id,
@@ -23,8 +23,8 @@ export class ExceptionEngine {
         
         if (!ratePolicy) return null;
         
-        const expectedRate = parseFloat(ratePolicy.rate);
-        const actualRate = parseFloat(entry.billable_rate);
+        const expectedRate = Number(ratePolicy.rate);
+        const actualRate = Number(entry.billable_rate);
         const variance = Math.abs(expectedRate - actualRate);
         
         if (variance > 0.01) {
@@ -43,7 +43,7 @@ export class ExceptionEngine {
     this.rules.push({
       id: 'billable_conflict',
       name: 'Billable Flag Conflict',
-      check: async (entry: any) => {
+      check: async (entry: TimeEntryRecord) => {
         const taskResult = await query(
           'SELECT category, default_billable FROM tasks WHERE id = $1',
           [entry.task_id]
@@ -70,7 +70,7 @@ export class ExceptionEngine {
     this.rules.push({
       id: 'budget_breach',
       name: 'Budget Breach Detection',
-      check: async (entry: any) => {
+      check: async (entry: TimeEntryRecord) => {
         const budgetResult = await query(
           `SELECT 
             p.budget,
@@ -109,7 +109,7 @@ export class ExceptionEngine {
     this.rules.push({
       id: 'deprecated_task',
       name: 'Deprecated Task Usage',
-      check: async (entry: any) => {
+      check: async (entry: TimeEntryRecord) => {
         const taskResult = await query(
           'SELECT is_active, name FROM tasks WHERE id = $1',
           [entry.task_id]
@@ -134,7 +134,7 @@ export class ExceptionEngine {
     this.rules.push({
       id: 'missing_rate',
       name: 'Missing Rate Detection',
-      check: async (entry: any) => {
+      check: async (entry: TimeEntryRecord) => {
         if (!entry.billable_rate || entry.billable_rate === 0) {
           if (entry.billable_flag) {
             return {
@@ -158,7 +158,7 @@ export class ExceptionEngine {
     });
   }
 
-  async detectExceptions(entries: any[]): Promise<Exception[]> {
+  async detectExceptions(entries: TimeEntryRecord[]): Promise<Exception[]> {
     const exceptions: Exception[] = [];
 
     for (const entry of entries) {
@@ -168,11 +168,14 @@ export class ExceptionEngine {
           exceptions.push({
             id: uuidv4(),
             entryId: entry.id,
-            type: exception.type as any,
-            severity: exception.severity as any,
+            type: exception.type as Exception['type'],
+            severity: exception.severity as Exception['severity'],
             description: exception.description,
             suggestedAction: exception.suggestedAction,
+            entityType: 'time_entry',
+            entityId: entry.id,
             status: 'pending',
+            createdAt: new Date(),
           });
         }
       }
@@ -228,11 +231,11 @@ export class ExceptionEngine {
     personId: string,
     clientId: string,
     date: Date
-  ): Promise<any> {
-    const result = await query(
-      `SELECT rate 
-      FROM rate_policies 
-      WHERE person_id = $1 
+  ): Promise<RatePolicyRecord | undefined> {
+    const result = await query<RatePolicyRecord>(
+      `SELECT rate
+      FROM rate_policies
+      WHERE person_id = $1
         AND client_id = $2
         AND effective_from <= $3
         AND (effective_to IS NULL OR effective_to >= $3)
@@ -260,7 +263,7 @@ export class ExceptionEngine {
       JOIN clients c ON te.client_id = c.id
       WHERE e.status = 'pending'`;
 
-    const params: any[] = [];
+    const params: unknown[] = [];
     if (clientId) {
       queryText += ' AND te.client_id = $1';
       params.push(clientId);
@@ -303,13 +306,15 @@ export class ExceptionEngine {
   }
 }
 
-interface ExceptionRule {
+export interface ExceptionCheckResult {
+  type: string;
+  severity: string;
+  description: string;
+  suggestedAction: string;
+}
+
+export interface ExceptionRule {
   id: string;
   name: string;
-  check: (entry: any) => Promise<{
-    type: string;
-    severity: string;
-    description: string;
-    suggestedAction: string;
-  } | null>;
+  check: (entry: TimeEntryRecord) => Promise<ExceptionCheckResult | null>;
 }

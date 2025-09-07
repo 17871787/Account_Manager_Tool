@@ -18,10 +18,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', routes);
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const error = err as { status?: number; message?: string };
   console.error('Error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
+  res.status(error.status ?? 500).json({
+    error: error.message ?? 'Internal server error',
     timestamp: new Date(),
   });
 });

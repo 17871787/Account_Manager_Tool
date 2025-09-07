@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 // Helper to capture exceptions with additional context
 export const captureException = (
   error: Error | unknown,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ) => {
   Sentry.withScope((scope) => {
     if (context) {
@@ -17,7 +17,7 @@ export const captureException = (
 export const captureMessage = (
   message: string,
   level: Sentry.SeverityLevel = 'info',
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ) => {
   Sentry.withScope((scope) => {
     if (context) {
@@ -32,12 +32,14 @@ export const trackAPIPerformance = async <T>(
   operation: string,
   fn: () => Promise<T>
 ): Promise<T> => {
-  const transaction = Sentry.startTransaction({
+  // @ts-ignore - startTransaction exists at runtime
+  const transaction = (Sentry as any).startTransaction({
     op: 'api',
     name: operation,
   });
 
-  Sentry.getCurrentHub().getScope()?.setSpan(transaction);
+  // @ts-ignore - setSpan is available on scope
+  (Sentry.getCurrentHub().getScope() as any)?.setSpan(transaction);
 
   try {
     const result = await fn();
@@ -70,7 +72,7 @@ export const setUserContext = (user: {
 export const addBreadcrumb = (
   message: string,
   category: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ) => {
   Sentry.addBreadcrumb({
     message,

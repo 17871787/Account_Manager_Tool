@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, QueryResult } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -8,12 +8,15 @@ export const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-export async function query(text: string, params?: any[]) {
+export async function query<T = any>(
+  text: string,
+  params?: unknown[]
+): Promise<QueryResult<T>> {
   const start = Date.now();
   const res = await pool.query(text, params);
   const duration = Date.now() - start;
   console.log('Executed query', { text, duration, rows: res.rowCount });
-  return res;
+  return res as QueryResult<T>;
 }
 
 export async function getClient() {

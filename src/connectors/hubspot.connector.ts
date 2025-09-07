@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { RevenueMetrics } from '../types';
 
 export interface HubSpotDeal {
   id: string;
@@ -42,7 +43,7 @@ export class HubSpotConnector {
 
   async getDeals(limit = 100): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/deals', {
+      const response = await this.client.get<{ results: HubSpotDeal[] }>('/crm/v3/objects/deals', {
         params: {
           limit,
           properties: 'dealname,amount,closedate,dealstage,pipeline,hs_arr,hs_mrr,hs_tcv,hs_acv',
@@ -57,7 +58,7 @@ export class HubSpotConnector {
 
   async getCompanies(limit = 100): Promise<HubSpotCompany[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/companies', {
+      const response = await this.client.get<{ results: HubSpotCompany[] }>('/crm/v3/objects/companies', {
         params: {
           limit,
           properties: 'name,domain,industry,annualrevenue,numberofemployees,lifecyclestage',
@@ -72,8 +73,10 @@ export class HubSpotConnector {
 
   async getDealsByCompany(companyId: string): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get(`/crm/v3/objects/companies/${companyId}/associations/deals`);
-      const dealIds = response.data.results.map((r: any) => r.id);
+      const response = await this.client.get<{ results: { id: string }[] }>(
+        `/crm/v3/objects/companies/${companyId}/associations/deals`
+      );
+      const dealIds = response.data.results.map(r => r.id);
       
       if (dealIds.length === 0) return [];
       
@@ -89,7 +92,7 @@ export class HubSpotConnector {
     }
   }
 
-  async getRevenueMetrics(companyName: string): Promise<any> {
+  async getRevenueMetrics(companyName: string): Promise<RevenueMetrics | null> {
     try {
       // Search for company by name
       const searchResponse = await this.client.post('/crm/v3/objects/companies/search', {
@@ -123,7 +126,7 @@ export class HubSpotConnector {
         return sum + (parseFloat(deal.properties.amount) || 0);
       }, 0);
 
-      return {
+      const metrics: RevenueMetrics = {
         companyName: company.properties.name,
         annualRevenue: parseFloat(company.properties.annualrevenue) || 0,
         closedRevenue: totalRevenue,
@@ -131,6 +134,7 @@ export class HubSpotConnector {
         dealCount: deals.length,
         closedDealCount: closedWonDeals.length,
       };
+      return metrics;
     } catch (error) {
       console.error('Error fetching revenue metrics:', error);
       return null;

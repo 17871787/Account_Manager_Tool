@@ -1,4 +1,4 @@
-import { Exception, HarvestTimeEntry } from '../types';
+import { Exception, HarvestTimeEntry, RatePolicyRecord } from '../types';
 import { query } from '../models/database';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -205,11 +205,17 @@ export class ExceptionEngineOptimized {
     return this.deduplicateExceptions(exceptions);
   }
 
-  private findApplicableRate(ratePolicies: any[], date: Date): any {
-    // Find the most recent rate policy before or on the given date
+  private findApplicableRate(
+    ratePolicies: RatePolicyRecord[],
+    date: Date
+  ): RatePolicyRecord | undefined {
     return ratePolicies
-      .filter(rp => new Date(rp.effective_from || rp.effective_date) <= date)
-      .sort((a, b) => new Date(b.effective_from || b.effective_date).getTime() - new Date(a.effective_from || a.effective_date).getTime())[0];
+      .filter(rp => new Date((rp.effective_from || rp.effective_date) as Date) <= date)
+      .sort(
+        (a, b) =>
+          new Date((b.effective_from || b.effective_date) as Date).getTime() -
+          new Date((a.effective_from || a.effective_date) as Date).getTime()
+      )[0];
   }
 
   private deduplicateExceptions(exceptions: Exception[]): Exception[] {
@@ -235,7 +241,7 @@ export interface ExceptionRule {
   id: string;
   name: string;
   description: string;
-  evaluate: (context: any) => boolean;
+  evaluate: (context: Record<string, unknown>) => boolean;
   severity: 'low' | 'medium' | 'high';
   suggestedAction: string;
 }

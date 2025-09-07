@@ -1,6 +1,38 @@
 import axios, { AxiosInstance } from 'axios';
-import { HarvestTimeEntry } from '../types';
+import {
+  HarvestTimeEntry,
+  HarvestProject,
+  HarvestClient,
+  HarvestTask,
+  HarvestUser,
+  ProjectBudget,
+} from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+
+interface TimeEntryQueryParams {
+  from: string;
+  to: string;
+  per_page: number;
+  client_id?: string;
+  project_id?: string;
+}
+
+interface HarvestTimeEntryResponse {
+  id: number;
+  spent_date: string;
+  client?: { name: string };
+  project?: { name: string };
+  task?: { name: string };
+  notes?: string;
+  hours: number;
+  billable: boolean;
+  is_locked: boolean;
+  user?: { first_name: string; last_name: string };
+  user_assignment?: { role: string };
+  billable_rate?: number;
+  cost_rate?: number;
+  external_reference?: { id: string };
+}
 
 export class HarvestConnector {
   private client: AxiosInstance;
@@ -26,7 +58,7 @@ export class HarvestConnector {
     projectId?: string
   ): Promise<HarvestTimeEntry[]> {
     try {
-      const params: any = {
+      const params: TimeEntryQueryParams = {
         from: format(fromDate, 'yyyy-MM-dd'),
         to: format(toDate, 'yyyy-MM-dd'),
         per_page: 100,
@@ -40,11 +72,14 @@ export class HarvestConnector {
       let hasMore = true;
 
       while (hasMore) {
-        const response = await this.client.get('/time_entries', {
+        const response = await this.client.get<{
+          time_entries: HarvestTimeEntryResponse[];
+          next_page: number | null;
+        }>('/time_entries', {
           params: { ...params, page },
         });
 
-        const entries = response.data.time_entries.map(this.mapTimeEntry);
+        const entries = response.data.time_entries.map(e => this.mapTimeEntry(e));
         allEntries = [...allEntries, ...entries];
 
         hasMore = response.data.next_page !== null;
@@ -58,9 +93,9 @@ export class HarvestConnector {
     }
   }
 
-  async getProjects(isActive = true): Promise<any[]> {
+  async getProjects(isActive = true): Promise<HarvestProject[]> {
     try {
-      const response = await this.client.get('/projects', {
+      const response = await this.client.get<{ projects: HarvestProject[] }>('/projects', {
         params: { is_active: isActive, per_page: 100 },
       });
       return response.data.projects;
@@ -70,9 +105,9 @@ export class HarvestConnector {
     }
   }
 
-  async getClients(isActive = true): Promise<any[]> {
+  async getClients(isActive = true): Promise<HarvestClient[]> {
     try {
-      const response = await this.client.get('/clients', {
+      const response = await this.client.get<{ clients: HarvestClient[] }>('/clients', {
         params: { is_active: isActive, per_page: 100 },
       });
       return response.data.clients;
@@ -82,9 +117,9 @@ export class HarvestConnector {
     }
   }
 
-  async getTasks(): Promise<any[]> {
+  async getTasks(): Promise<HarvestTask[]> {
     try {
-      const response = await this.client.get('/tasks', {
+      const response = await this.client.get<{ tasks: HarvestTask[] }>('/tasks', {
         params: { per_page: 100 },
       });
       return response.data.tasks;
@@ -94,9 +129,9 @@ export class HarvestConnector {
     }
   }
 
-  async getUsers(isActive = true): Promise<any[]> {
+  async getUsers(isActive = true): Promise<HarvestUser[]> {
     try {
-      const response = await this.client.get('/users', {
+      const response = await this.client.get<{ users: HarvestUser[] }>('/users', {
         params: { is_active: isActive, per_page: 100 },
       });
       return response.data.users;
@@ -106,14 +141,10 @@ export class HarvestConnector {
     }
   }
 
-  async getProjectBudget(projectId: string): Promise<any> {
+  async getProjectBudget(projectId: string): Promise<ProjectBudget> {
     try {
-      const response = await this.client.get(`/projects/${projectId}`);
-      return {
-        budget: response.data.project.budget,
-        budgetBy: response.data.project.budget_by,
-        budgetIsMonthly: response.data.project.budget_is_monthly,
-      };
+      const response = await this.client.get<{ project: ProjectBudget }>(`/projects/${projectId}`);
+      return response.data.project;
     } catch (error) {
       console.error('Error fetching project budget:', error);
       throw error;
@@ -127,7 +158,7 @@ export class HarvestConnector {
     return this.getTimeEntries(fromDate, toDate, clientId);
   }
 
-  private mapTimeEntry(entry: any): HarvestTimeEntry {
+  private mapTimeEntry(entry: HarvestTimeEntryResponse): HarvestTimeEntry {
     return {
       entryId: entry.id.toString(),
       date: new Date(entry.spent_date),

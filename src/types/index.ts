@@ -101,7 +101,95 @@ export interface Exception {
   reviewedBy?: string;
   reviewedAt?: Date;
   helpdeskTicketId?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BudgetVsBurn {
+  budget: number;
+  budgetHours: number;
+  actualHours: number;
+  actualCost: number;
+  monthProgress: number;
+  hoursUtilization: number;
+  costUtilization: number;
+  burnRate: number;
+  forecastToCompletion: number;
+  status: 'over-budget' | 'at-risk' | 'on-track';
+}
+
+export interface MonthlyProjectReport {
+  projectName: string;
+  profitability: ProfitabilityMetric | null;
+  budgetVsBurn: BudgetVsBurn | null;
+}
+
+export interface MonthlyReport {
+  clientId: string;
+  month: string;
+  projects: MonthlyProjectReport[];
+  generatedAt: Date;
+}
+
+export interface HarvestProject {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+export interface HarvestClient {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+export interface HarvestTask {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+export interface HarvestUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+}
+
+export interface ProjectBudget {
+  budget: number;
+  budgetBy: string;
+  budgetIsMonthly: boolean;
+}
+
+export interface TimeEntryRecord {
+  id: string;
+  person_id: string;
+  client_id: string;
+  project_id: string;
+  task_id: string;
+  task_name?: string;
+  billable_rate: number;
+  cost_rate: number;
+  billable_flag: boolean;
+  date: Date;
+  [key: string]: unknown;
+}
+
+export interface RatePolicyRecord {
+  rate: number;
+  effective_from?: Date;
+  effective_to?: Date;
+  effective_date?: Date;
+  [key: string]: unknown;
+}
+
+export interface RevenueMetrics {
+  companyName: string;
+  annualRevenue: number;
+  closedRevenue: number;
+  pipelineValue: number;
+  dealCount: number;
+  closedDealCount: number;
 }
 
 export interface BudgetTracking {
@@ -164,7 +252,7 @@ export interface AuditLog {
   action: string;
   entityType: string;
   entityId: string;
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
   helpdeskTicketId?: string;
 }
