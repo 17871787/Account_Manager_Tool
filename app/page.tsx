@@ -6,7 +6,7 @@ import {
   TrendingUp, 
   TrendingDown, 
   AlertTriangle, 
-  DollarSign,
+  PoundSterling,
   Clock,
   Users,
   Activity,
@@ -218,7 +218,7 @@ export default function Dashboard() {
           title="Total Revenue"
           value={`£${totalRevenue.toLocaleString()}`}
           change="+12.5% from last period"
-          icon={DollarSign}
+          icon={PoundSterling}
           trend="up"
         />
         <MetricCard
