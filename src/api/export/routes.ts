@@ -8,11 +8,11 @@ const router = Router();
 const exportService = new ExportService();
 
 router.post('/export/invoice', async (req: Request, res: Response) => {
-  let clientId: string;
-  let projectId: string;
-  let startDate: string;
-  let endDate: string;
-  let userId: string;
+  let clientId: string | undefined;
+  let projectId: string | undefined;
+  let startDate: string | undefined;
+  let endDate: string | undefined;
+  let userId: string | undefined;
   try {
     const schema = z.object({
       clientId: z.string(),

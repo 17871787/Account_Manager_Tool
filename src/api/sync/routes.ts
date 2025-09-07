@@ -22,8 +22,8 @@ export default function createSyncRouter({
 
   router.post('/sync/harvest', async (req: Request, res: Response) => {
     let connector: HarvestConnector;
-    let fromDate: string;
-    let toDate: string;
+    let fromDate: string | undefined;
+    let toDate: string | undefined;
     let clientId: string | undefined;
     try {
       if (harvestConnector) {
