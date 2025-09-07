@@ -5,11 +5,8 @@ import routes from '../src/api/routes';
 
 const app = express();
 
-// Initialize Sentry request handler (must be first)
-app.use(Sentry.requestHandler());
-
-// Enable Sentry tracing  
-app.use(Sentry.tracingHandler());
+// Sentry v8 doesn't have these middleware for Express
+// They're automatically handled by the SDK initialization
 
 // Middleware
 app.use(cors());
@@ -42,8 +39,8 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api', routes);
 
-// Sentry error handler (must be before other error handlers)
-app.use(Sentry.errorHandler());
+// Sentry v8 doesn't have errorHandler middleware for Express
+// Errors are captured manually below
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
