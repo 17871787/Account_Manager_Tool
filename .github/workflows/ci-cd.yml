@@ -25,9 +25,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build API
-        run: npm run build:api
-
       - name: Run ESLint
         run: npm run lint
 
@@ -45,11 +42,14 @@ jobs:
           path: coverage
 
       - name: SonarQube Scan
-        if: secrets.SONAR_TOKEN != ''
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: Build API
+        run: npm run build:api
 
       - name: Build application
         run: npm run build

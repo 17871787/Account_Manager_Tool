@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from '@sentry/node';
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../types';
 

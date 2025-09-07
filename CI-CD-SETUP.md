@@ -28,7 +28,7 @@ VERCEL_ORG_ID: Your Vercel organization ID
 VERCEL_PROJECT_ID: Your project ID
 
 # Code Quality
-SONAR_TOKEN: SonarCloud token
+SONAR_TOKEN: SonarCloud token (required for SonarQube scan; step is skipped if empty)
 CODECOV_TOKEN: Codecov token (optional)
 SNYK_TOKEN: Snyk security token (optional)
 
