@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import routes from './api/routes';
+import createApiRouter from './api/routes';
 import { AppError } from './types';
 
 const app = express();
@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // API routes
-app.use('/api', routes);
+app.use('/api', createApiRouter());
 
 // Error handling middleware
 app.use((err: AppError, req: Request, res: Response, _next: NextFunction) => {
