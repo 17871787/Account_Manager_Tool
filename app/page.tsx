@@ -1,330 +1,495 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Container, Card, Heading, Text, Button, Flex, Box, Badge, Tabs, Grid } from '@radix-ui/themes'
-import {
-  TrendingUp, TrendingDown, AlertCircle, DollarSign,
-  Clock, FileText, Users, Activity, Download, RefreshCw
-} from 'lucide-react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import type { ProfitabilityPoint, ExceptionItem, BudgetDatum, SyncError, LastSync, SyncSource } from './types'
-import { mockProfitabilityData, mockExceptions, mockBudgetData, mockClients } from './mockData'
+import { useState, useEffect } from 'react';
+import { Card, Flex, Grid, Text, Button, Select, Badge, Heading, Box, Tabs } from '@radix-ui/themes';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  AlertTriangle, 
+  DollarSign,
+  Clock,
+  Users,
+  Activity,
+  FileText,
+  ChevronUp,
+  ChevronDown,
+  RefreshCw,
+  Download
+} from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  PieChart, 
+  Pie, 
+  Cell,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Legend,
+  Area,
+  AreaChart
+} from 'recharts';
+import { mockApiService } from '@/services/mockData';
+
+// Metric Card Component
+function MetricCard({ 
+  title, 
+  value, 
+  change, 
+  icon: Icon, 
+  trend 
+}: { 
+  title: string; 
+  value: string; 
+  change?: string; 
+  icon: any; 
+  trend?: 'up' | 'down' | 'neutral';
+}) {
+  const trendColor = trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-600';
+  const TrendIcon = trend === 'up' ? ChevronUp : trend === 'down' ? ChevronDown : null;
+  
+  return (
+    <Card className="p-4">
+      <Flex direction="column" gap="2">
+        <Flex justify="between" align="center">
+          <Text size="2" color="gray">{title}</Text>
+          <Icon className="h-4 w-4 text-gray-500" />
+        </Flex>
+        <Text size="6" weight="bold">{value}</Text>
+        {change && (
+          <Flex align="center" gap="1">
+            {TrendIcon && <TrendIcon className={`h-4 w-4 ${trendColor}`} />}
+            <Text size="2" className={trendColor}>
+              {change}
+            </Text>
+          </Flex>
+        )}
+      </Flex>
+    </Card>
+  );
+}
+
+// Exception Alert Component
+function ExceptionAlert({ exception }: { exception: any }) {
+  const severityColors = {
+    high: 'red',
+    medium: 'orange',
+    low: 'yellow'
+  };
+  
+  return (
+    <Card className="p-4 mb-3">
+      <Flex direction="column" gap="2">
+        <Flex justify="between" align="center">
+          <Flex align="center" gap="2">
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <Text weight="medium">{exception.type.replace(/_/g, ' ').toUpperCase()}</Text>
+          </Flex>
+          <Badge color={severityColors[exception.severity as keyof typeof severityColors]}>
+            {exception.severity}
+          </Badge>
+        </Flex>
+        <Text size="2" color="gray">{exception.clientName} - {exception.projectName}</Text>
+        <Text size="2">{exception.description}</Text>
+        <Text size="1" color="gray">Suggested: {exception.suggestedAction}</Text>
+        <Flex gap="2" className="mt-2">
+          <Button size="1" variant="soft" color="green">Approve</Button>
+          <Button size="1" variant="soft" color="red">Reject</Button>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
 
 export default function Dashboard() {
-  const [selectedClient, setSelectedClient] = useState<string>('Arla')
-  const [syncing, setSyncing] = useState<SyncSource | null>(null)
-  const [lastSync, setLastSync] = useState<LastSync>({
-    harvest: null,
-    hubspot: null,
-    sft: null,
-  })
-  const [profitabilityData, setProfitabilityData] = useState<ProfitabilityPoint[]>(mockProfitabilityData)
+  const [profitabilityData, setProfitabilityData] = useState<any[]>([]);
+  const [exceptions, setExceptions] = useState<any[]>([]);
+  const [timeSeriesData, setTimeSeriesData] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState('all');
+  const [selectedPeriod, setSelectedPeriod] = useState('30');
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState<string | null>(null);
 
-  const [syncError, setSyncError] = useState<SyncError | null>(null)
-  const [exceptions, setExceptions] = useState<ExceptionItem[]>(mockExceptions)
+  useEffect(() => {
+    loadDashboardData();
+  }, [selectedPeriod]);
 
-  const budgetData: BudgetDatum[] = mockBudgetData
-
-  const handleSync = async (source: SyncSource) => {
-    setSyncing(source)
-    setSyncError(null) // Clear any previous errors
+  const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      const endpoint = source === 'harvest' ? '/api/sync/harvest' :
-                       source === 'hubspot' ? '/api/sync/hubspot' :
-                       '/api/sync/sft'
+      const [profitData, exceptionsData, tsData] = await Promise.all([
+        mockApiService.getProfitabilityMetrics(),
+        mockApiService.getExceptions(),
+        mockApiService.getTimeSeriesData(parseInt(selectedPeriod))
+      ]);
       
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fromDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          toDate: new Date().toISOString(),
-        }),
-      })
-      
-      if (response.ok) {
-        setLastSync(prev => ({ ...prev, [source]: new Date() }))
-        // Refresh data after sync
-        // In a real app, you'd fetch updated data here
-      } else {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
-        setSyncError({
-          source: source.toUpperCase(),
-          message: errorData.message || `Failed to sync ${source}. Please try again.`
-        })
-      }
+      setProfitabilityData(profitData);
+      setExceptions(exceptionsData);
+      setTimeSeriesData(tsData);
     } catch (error) {
-      setSyncError({
-        source: source.toUpperCase(),
-        message: `Connection failed. Please check your ${source.toUpperCase()} credentials.`
-      })
-      console.error(`Failed to sync ${source}:`, error)
+      console.error('Error loading dashboard data:', error);
     } finally {
-      setSyncing(null)
+      setLoading(false);
     }
+  };
+
+  const handleSync = async (source: string) => {
+    setSyncing(source);
+    // Simulate sync delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    await loadDashboardData();
+    setSyncing(null);
+  };
+
+  // Calculate summary metrics
+  const totalRevenue = profitabilityData.reduce((sum, d) => sum + d.totalRevenue, 0);
+  const totalProfit = profitabilityData.reduce((sum, d) => sum + (d.totalRevenue - d.totalCost), 0);
+  const avgMargin = profitabilityData.length > 0 
+    ? (profitabilityData.reduce((sum, d) => sum + parseFloat(d.profitMargin), 0) / profitabilityData.length).toFixed(1)
+    : '0';
+  const totalHours = profitabilityData.reduce((sum, d) => sum + d.hoursWorked, 0);
+
+  // Prepare chart data
+  const pieData = profitabilityData.map(d => ({
+    name: d.clientName,
+    value: d.totalRevenue
+  }));
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Text size="4">Loading dashboard...</Text>
+      </div>
+    );
   }
 
   return (
-    <Container size="4" className="py-8">
+    <div className="min-h-screen bg-gray-50 p-8">
       {/* Header */}
-      <Flex justify="between" align="center" className="mb-8">
-        <Box>
-          <Heading size="8" className="mb-2">AM Copilot</Heading>
-          <Text size="3" color="gray">Profitability & Billing Dashboard</Text>
-        </Box>
-        <Flex gap="3">
-          <Button 
-            variant="soft" 
-            size="3"
-            onClick={() => handleSync('harvest')}
-            disabled={syncing === 'harvest'}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncing === 'harvest' ? 'animate-spin' : ''}`} />
-            {syncing === 'harvest' ? 'Syncing...' : 'Sync Harvest'}
-          </Button>
-          <Button 
-            variant="soft" 
-            size="3" 
-            color="orange"
-            onClick={() => handleSync('hubspot')}
-            disabled={syncing === 'hubspot'}
-          >
-            <Activity className={`w-4 h-4 mr-2 ${syncing === 'hubspot' ? 'animate-pulse' : ''}`} />
-            {syncing === 'hubspot' ? 'Syncing...' : 'Sync HubSpot'}
-          </Button>
-          <Button 
-            variant="soft" 
-            size="3" 
-            color="purple"
-            onClick={() => handleSync('sft')}
-            disabled={syncing === 'sft'}
-          >
-            <TrendingUp className={`w-4 h-4 mr-2 ${syncing === 'sft' ? 'animate-pulse' : ''}`} />
-            {syncing === 'sft' ? 'Syncing...' : 'Sync SFT'}
-          </Button>
-          <Button size="3">
-            <Download className="w-4 h-4 mr-2" />
-            Export Invoice
-          </Button>
-        </Flex>
-      </Flex>
-
-      {/* Sync Error Alert */}
-      {syncError && (
-        <Card className="mb-4 border-red-500 bg-red-50">
-          <Flex justify="between" align="center">
-            <Flex gap="3" align="center">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <Text color="red" weight="medium">
-                {syncError.source} Sync Failed: {syncError.message}
-              </Text>
-            </Flex>
+      <div className="mb-8">
+        <Flex justify="between" align="center" className="mb-4">
+          <div>
+            <Heading size="8" className="mb-2">AM Copilot Dashboard</Heading>
+            <Text color="gray">Real-time profitability tracking for Map of Ag</Text>
+          </div>
+          <Flex gap="3">
+            <Select.Root value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <Select.Trigger placeholder="Select period" />
+              <Select.Content>
+                <Select.Item value="7">Last 7 days</Select.Item>
+                <Select.Item value="30">Last 30 days</Select.Item>
+                <Select.Item value="90">Last 90 days</Select.Item>
+              </Select.Content>
+            </Select.Root>
             <Button 
-              size="1" 
-              variant="ghost" 
-              color="red"
-              onClick={() => setSyncError(null)}
+              variant="soft"
+              onClick={() => handleSync('harvest')}
+              disabled={syncing === 'harvest'}
             >
-              Dismiss
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing === 'harvest' ? 'animate-spin' : ''}`} />
+              Sync Harvest
+            </Button>
+            <Button 
+              variant="soft"
+              color="orange"
+              onClick={() => handleSync('hubspot')}
+              disabled={syncing === 'hubspot'}
+            >
+              <Activity className={`h-4 w-4 mr-2 ${syncing === 'hubspot' ? 'animate-pulse' : ''}`} />
+              Sync HubSpot
+            </Button>
+            <Button>
+              <Download className="h-4 w-4 mr-2" />
+              Export Report
             </Button>
           </Flex>
-        </Card>
-      )}
+        </Flex>
+      </div>
 
       {/* Key Metrics */}
       <Grid columns="4" gap="4" className="mb-8">
-        <Card>
-          <Flex direction="column" gap="2">
-            <Flex justify="between" align="center">
-              <Text size="2" color="gray">Current Margin</Text>
-              <TrendingUp className="w-4 h-4 text-green-500" />
-            </Flex>
-            <Heading size="6">32.4%</Heading>
-            <Text size="1" color="green">+2.3% from last month</Text>
-          </Flex>
-        </Card>
-
-        <Card>
-          <Flex direction="column" gap="2">
-            <Flex justify="between" align="center">
-              <Text size="2" color="gray">Recognised Revenue</Text>
-              <DollarSign className="w-4 h-4 text-blue-500" />
-            </Flex>
-            <Heading size="6">£155,000</Heading>
-            <Text size="1" color="gray">December 2024</Text>
-          </Flex>
-        </Card>
-
-        <Card>
-          <Flex direction="column" gap="2">
-            <Flex justify="between" align="center">
-              <Text size="2" color="gray">Pending Exceptions</Text>
-              <AlertCircle className="w-4 h-4 text-orange-500" />
-            </Flex>
-            <Heading size="6">3</Heading>
-            <Text size="1" color="orange">2 high priority</Text>
-          </Flex>
-        </Card>
-
-        <Card>
-          <Flex direction="column" gap="2">
-            <Flex justify="between" align="center">
-              <Text size="2" color="gray">Budget Utilization</Text>
-              <Clock className="w-4 h-4 text-purple-500" />
-            </Flex>
-            <Heading size="6">68%</Heading>
-            <Text size="1" color="gray">On track</Text>
-          </Flex>
-        </Card>
+        <MetricCard
+          title="Total Revenue"
+          value={`$${totalRevenue.toLocaleString()}`}
+          change="+12.5% from last period"
+          icon={DollarSign}
+          trend="up"
+        />
+        <MetricCard
+          title="Net Profit"
+          value={`$${totalProfit.toLocaleString()}`}
+          change="+8.3% from last period"
+          icon={TrendingUp}
+          trend="up"
+        />
+        <MetricCard
+          title="Profit Margin"
+          value={`${avgMargin}%`}
+          change="-2.1% from last period"
+          icon={Activity}
+          trend="down"
+        />
+        <MetricCard
+          title="Hours Tracked"
+          value={totalHours.toLocaleString()}
+          change="+18 hours this week"
+          icon={Clock}
+          trend="up"
+        />
       </Grid>
 
-      {/* Main Content Tabs */}
-      <Tabs.Root defaultValue="profitability">
+      {/* Tabs for different views */}
+      <Tabs.Root defaultValue="overview">
         <Tabs.List size="2">
+          <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
           <Tabs.Trigger value="profitability">Profitability</Tabs.Trigger>
-          <Tabs.Trigger value="exceptions">Exceptions</Tabs.Trigger>
-          <Tabs.Trigger value="budget">Budget vs Burn</Tabs.Trigger>
+          <Tabs.Trigger value="exceptions">
+            Exceptions
+            {exceptions.length > 0 && (
+              <Badge color="red" className="ml-2">{exceptions.length}</Badge>
+            )}
+          </Tabs.Trigger>
           <Tabs.Trigger value="clients">Clients</Tabs.Trigger>
         </Tabs.List>
 
         <Box className="mt-6">
-          <Tabs.Content value="profitability">
-            <Card size="3">
-              <Heading size="4" className="mb-4">Profitability Trend - {selectedClient}</Heading>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={profitabilityData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `£${value.toLocaleString()}`} />
-                  <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#3b82f6" name="Revenue" strokeWidth={2} />
-                  <Line type="monotone" dataKey="cost" stroke="#ef4444" name="Cost" strokeWidth={2} />
-                  <Line type="monotone" dataKey="margin" stroke="#10b981" name="Margin" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card>
-          </Tabs.Content>
+          {/* Overview Tab */}
+          <Tabs.Content value="overview">
+            <Grid columns="3" gap="4">
+              {/* Revenue Trend Chart */}
+              <div className="col-span-2">
+                <Card className="p-6">
+                  <Text weight="medium" size="4" className="mb-4">Revenue & Profit Trend</Text>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={timeSeriesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Area 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stackId="1"
+                        stroke="#0088FE" 
+                        fill="#0088FE" 
+                        fillOpacity={0.6}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="profit" 
+                        stackId="2"
+                        stroke="#00C49F" 
+                        fill="#00C49F"
+                        fillOpacity={0.6}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Card>
+              </div>
 
-          <Tabs.Content value="exceptions">
-            <Card size="3">
-              <Flex justify="between" align="center" className="mb-4">
-                <Heading size="4">Exception Queue</Heading>
-                <Badge color="orange" size="2">{exceptions.length} Pending</Badge>
-              </Flex>
-              
-              <Flex direction="column" gap="3">
-                {exceptions.map((exception) => (
-                  <Card key={exception.id} variant="surface">
-                    <Flex justify="between" align="start">
-                      <Box className="flex-1">
-                        <Flex gap="2" align="center" className="mb-2">
-                          <Badge color={exception.severity === 'high' ? 'red' : 'orange'}>
-                            {exception.severity.toUpperCase()}
-                          </Badge>
-                          <Text weight="bold">{exception.type}</Text>
-                          <Text size="2" color="gray">• {exception.client}</Text>
-                        </Flex>
-                        <Text size="2" className="mb-2">{exception.description}</Text>
-                        <Text size="1" color="blue">Suggested: {exception.action}</Text>
-                      </Box>
-                      <Flex gap="2">
-                        <Button size="2" variant="soft" color="green">Approve</Button>
-                        <Button size="2" variant="soft" color="red">Reject</Button>
-                      </Flex>
-                    </Flex>
-                  </Card>
-                ))}
-              </Flex>
-            </Card>
-          </Tabs.Content>
-
-          <Tabs.Content value="budget">
-            <Grid columns="2" gap="4">
-              <Card size="3">
-                <Heading size="4" className="mb-4">Budget Utilization</Heading>
+              {/* Revenue Distribution */}
+              <Card className="p-6">
+                <Text weight="medium" size="4" className="mb-4">Revenue by Client</Text>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={budgetData}
+                      data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={5}
+                      labelLine={false}
+                      label={(entry) => entry.name}
+                      outerRadius={80}
+                      fill="#8884d8"
                       dataKey="value"
                     >
-                      {budgetData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
                   </PieChart>
                 </ResponsiveContainer>
-                <Flex justify="center" gap="4" className="mt-4">
-                  <Flex align="center" gap="2">
-                    <Box className="w-3 h-3 bg-blue-500 rounded"></Box>
-                    <Text size="2">Used: 68%</Text>
-                  </Flex>
-                  <Flex align="center" gap="2">
-                    <Box className="w-3 h-3 bg-gray-200 rounded"></Box>
-                    <Text size="2">Remaining: 32%</Text>
-                  </Flex>
-                </Flex>
-              </Card>
-
-              <Card size="3">
-                <Heading size="4" className="mb-4">Burn Rate Analysis</Heading>
-                <Flex direction="column" gap="3">
-                  <Flex justify="between">
-                    <Text size="2">Monthly Budget</Text>
-                    <Text weight="bold">£50,000</Text>
-                  </Flex>
-                  <Flex justify="between">
-                    <Text size="2">Current Spend</Text>
-                    <Text weight="bold">£34,000</Text>
-                  </Flex>
-                  <Flex justify="between">
-                    <Text size="2">Days Remaining</Text>
-                    <Text weight="bold">12</Text>
-                  </Flex>
-                  <Flex justify="between">
-                    <Text size="2">Projected Total</Text>
-                    <Text weight="bold" color="green">£48,500</Text>
-                  </Flex>
-                  <Box className="pt-3 border-t">
-                    <Badge size="2" color="green">On Track</Badge>
-                  </Box>
-                </Flex>
               </Card>
             </Grid>
           </Tabs.Content>
 
+          {/* Profitability Tab */}
+          <Tabs.Content value="profitability">
+            <Card className="p-6">
+              <Text weight="medium" size="4" className="mb-4">Client Profitability Analysis</Text>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2">Client</th>
+                      <th className="text-right py-2">Revenue</th>
+                      <th className="text-right py-2">Cost</th>
+                      <th className="text-right py-2">Profit</th>
+                      <th className="text-right py-2">Margin</th>
+                      <th className="text-right py-2">Budget Used</th>
+                      <th className="text-right py-2">Hours</th>
+                      <th className="text-right py-2">Avg Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profitabilityData.map((client) => {
+                      const profit = client.totalRevenue - client.totalCost;
+                      return (
+                        <tr key={client.clientId} className="border-b hover:bg-gray-50">
+                          <td className="py-3">
+                            <Text weight="medium">{client.clientName}</Text>
+                          </td>
+                          <td className="text-right py-3">
+                            <Text color="green">${client.totalRevenue.toLocaleString()}</Text>
+                          </td>
+                          <td className="text-right py-3">
+                            <Text color="red">${client.totalCost.toLocaleString()}</Text>
+                          </td>
+                          <td className="text-right py-3">
+                            <Text weight="medium">${profit.toLocaleString()}</Text>
+                          </td>
+                          <td className="text-right py-3">
+                            <Badge color={parseFloat(client.profitMargin) > 50 ? 'green' : 'orange'}>
+                              {client.profitMargin}%
+                            </Badge>
+                          </td>
+                          <td className="text-right py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-20 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full ${
+                                    parseFloat(client.budgetUtilization) > 90 ? 'bg-red-500' : 
+                                    parseFloat(client.budgetUtilization) > 75 ? 'bg-orange-500' : 'bg-green-500'
+                                  }`}
+                                  style={{ width: `${Math.min(100, parseFloat(client.budgetUtilization))}%` }}
+                                />
+                              </div>
+                              <Text size="2">{client.budgetUtilization}%</Text>
+                            </div>
+                          </td>
+                          <td className="text-right py-3">
+                            {client.hoursWorked}
+                          </td>
+                          <td className="text-right py-3">
+                            ${client.averageRate}/hr
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </Tabs.Content>
+
+          {/* Exceptions Tab */}
+          <Tabs.Content value="exceptions">
+            <Grid columns="2" gap="4">
+              <div>
+                <Card className="p-4">
+                  <Flex justify="between" align="center" className="mb-4">
+                    <Text weight="medium" size="4">Active Exceptions</Text>
+                    <Badge color="red">{exceptions.length} Total</Badge>
+                  </Flex>
+                  <div className="max-h-[600px] overflow-y-auto">
+                    {exceptions.length > 0 ? (
+                      exceptions.map((exception) => (
+                        <ExceptionAlert key={exception.id} exception={exception} />
+                      ))
+                    ) : (
+                      <Text color="gray" size="2">No exceptions to report</Text>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <div>
+                <Card className="p-4 mb-4">
+                  <Text weight="medium" size="4" className="mb-4">Exception Summary</Text>
+                  <Flex direction="column" gap="3">
+                    <Flex justify="between">
+                      <Text size="2">High Priority</Text>
+                      <Badge color="red">{exceptions.filter(e => e.severity === 'high').length}</Badge>
+                    </Flex>
+                    <Flex justify="between">
+                      <Text size="2">Medium Priority</Text>
+                      <Badge color="orange">{exceptions.filter(e => e.severity === 'medium').length}</Badge>
+                    </Flex>
+                    <Flex justify="between">
+                      <Text size="2">Low Priority</Text>
+                      <Badge color="yellow">{exceptions.filter(e => e.severity === 'low').length}</Badge>
+                    </Flex>
+                  </Flex>
+                </Card>
+
+                <Card className="p-4">
+                  <Text weight="medium" size="4" className="mb-4">Quick Actions</Text>
+                  <Flex direction="column" gap="2">
+                    <Button variant="soft" className="w-full justify-start">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generate Invoice
+                    </Button>
+                    <Button variant="soft" className="w-full justify-start">
+                      <Users className="h-4 w-4 mr-2" />
+                      Update Client Rates
+                    </Button>
+                    <Button variant="soft" className="w-full justify-start">
+                      <Activity className="h-4 w-4 mr-2" />
+                      Run Profitability Report
+                    </Button>
+                    <Button variant="soft" className="w-full justify-start">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Review Time Entries
+                    </Button>
+                  </Flex>
+                </Card>
+              </div>
+            </Grid>
+          </Tabs.Content>
+
+          {/* Clients Tab */}
           <Tabs.Content value="clients">
-            <Card size="3">
-              <Heading size="4" className="mb-4">Client Portfolio</Heading>
-              <Grid columns="3" gap="4">
-                {mockClients.map((client) => (
-                  <Card key={client} variant="surface">
-                    <Flex direction="column" gap="2">
-                      <Heading size="3">{client}</Heading>
-                      <Flex justify="between">
-                        <Text size="2" color="gray">Margin</Text>
-                        <Text size="2" weight="bold" color="green">28.5%</Text>
-                      </Flex>
+            <Grid columns="3" gap="4">
+              {profitabilityData.map((client) => {
+                const profit = client.totalRevenue - client.totalCost;
+                return (
+                  <Card key={client.clientId} className="p-4">
+                    <Flex direction="column" gap="3">
+                      <Heading size="4">{client.clientName}</Heading>
                       <Flex justify="between">
                         <Text size="2" color="gray">Revenue</Text>
-                        <Text size="2" weight="bold">£125,000</Text>
+                        <Text size="2" weight="bold">${client.totalRevenue.toLocaleString()}</Text>
+                      </Flex>
+                      <Flex justify="between">
+                        <Text size="2" color="gray">Profit</Text>
+                        <Text size="2" weight="bold" color="green">${profit.toLocaleString()}</Text>
+                      </Flex>
+                      <Flex justify="between">
+                        <Text size="2" color="gray">Margin</Text>
+                        <Badge color={parseFloat(client.profitMargin) > 50 ? 'green' : 'orange'}>
+                          {client.profitMargin}%
+                        </Badge>
+                      </Flex>
+                      <Flex justify="between">
+                        <Text size="2" color="gray">Hours</Text>
+                        <Text size="2" weight="bold">{client.hoursWorked}</Text>
                       </Flex>
                       <Button size="2" variant="soft">View Details</Button>
                     </Flex>
                   </Card>
-                ))}
-              </Grid>
-            </Card>
+                );
+              })}
+            </Grid>
           </Tabs.Content>
         </Box>
       </Tabs.Root>
-    </Container>
-  )
+    </div>
+  );
 }
