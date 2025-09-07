@@ -151,12 +151,20 @@ npm run dev
 # Run tests
 npm test
 
+# Watch tests on change
+npm run test:watch
+
+# Generate coverage reports
+npm run test:coverage
+
 # Type checking
 npm run typecheck
 
-# Linting
+# Check for lint issues
 npm run lint
 
+# Automatically fix lint problems
+npm run lint:fix
 # Build for production
 npm run build
 ```

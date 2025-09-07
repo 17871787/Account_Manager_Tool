@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { ProfitabilityService } from '../services/profitability.service';
 import { query } from '../models/database';
+import { captureException } from '../utils/sentry';
 
 import createSyncRouter, { SyncRouterDeps } from './sync/routes';
 import exceptionsRouter from './exceptions/routes';
@@ -21,8 +22,8 @@ export default function createApiRouter(deps?: SyncRouterDeps) {
 
   // Calculate profitability
   router.post('/profitability/calculate', async (req: Request, res: Response) => {
+    const { clientId, projectId, month } = req.body;
     try {
-      const { clientId, projectId, month } = req.body;
       const metric = await profitabilityService.calculateProfitability(
         clientId,
         projectId,
@@ -30,7 +31,12 @@ export default function createApiRouter(deps?: SyncRouterDeps) {
       );
       res.json(metric);
     } catch (error) {
-      console.error('Profitability calculation error:', error);
+      captureException(error, {
+        operation: 'calculateProfitability',
+        clientId,
+        projectId,
+        month,
+      });
       res.status(500).json({ error: 'Failed to calculate profitability' });
     }
   });
@@ -43,22 +49,29 @@ export default function createApiRouter(deps?: SyncRouterDeps) {
       );
       res.json(metrics);
     } catch (error) {
-      console.error('Portfolio profitability error:', error);
+      captureException(error, {
+        operation: 'getPortfolioProfitability',
+        month: req.params.month,
+      });
       res.status(500).json({ error: 'Failed to get portfolio profitability' });
     }
   });
 
   // Get client trend
   router.get('/profitability/trend/:clientId', async (req: Request, res: Response) => {
+    const { months = 6 } = req.query;
     try {
-      const { months = 6 } = req.query;
       const trend = await profitabilityService.getClientProfitabilityTrend(
         req.params.clientId,
         Number(months)
       );
       res.json(trend);
     } catch (error) {
-      console.error('Trend error:', error);
+      captureException(error, {
+        operation: 'getClientProfitabilityTrend',
+        clientId: req.params.clientId,
+        months,
+      });
       res.status(500).json({ error: 'Failed to get profitability trend' });
     }
   });
@@ -69,7 +82,9 @@ export default function createApiRouter(deps?: SyncRouterDeps) {
       const result = await query('SELECT * FROM clients WHERE is_active = true ORDER BY name');
       res.json(result.rows);
     } catch (error) {
-      console.error('Clients error:', error);
+      captureException(error, {
+        operation: 'getClients',
+      });
       res.status(500).json({ error: 'Failed to get clients' });
     }
   });
@@ -83,7 +98,10 @@ export default function createApiRouter(deps?: SyncRouterDeps) {
       );
       res.json(result.rows);
     } catch (error) {
-      console.error('Projects error:', error);
+      captureException(error, {
+        operation: 'getProjects',
+        clientId: req.params.clientId,
+      });
       res.status(500).json({ error: 'Failed to get projects' });
     }
   });

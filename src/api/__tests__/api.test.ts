@@ -140,4 +140,86 @@ describe('API endpoints', () => {
     expect(res.body.error).toBe('Failed to sync Harvest data');
     expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
   });
+
+  it('returns 500 if Harvest env vars missing', async () => {
+    const { HARVEST_ACCESS_TOKEN, HARVEST_ACCOUNT_ID } = process.env;
+    delete process.env.HARVEST_ACCESS_TOKEN;
+    delete process.env.HARVEST_ACCOUNT_ID;
+
+    const appLocal = express();
+    appLocal.use(express.json());
+    appLocal.use('/api', createApiRouter());
+
+    const res = await request(appLocal)
+      .post('/api/sync/harvest')
+      .send({
+        fromDate: new Date().toISOString(),
+        toDate: new Date().toISOString(),
+      });
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/HARVEST/);
+
+    if (HARVEST_ACCESS_TOKEN) {
+      process.env.HARVEST_ACCESS_TOKEN = HARVEST_ACCESS_TOKEN;
+    } else {
+      delete process.env.HARVEST_ACCESS_TOKEN;
+    }
+    if (HARVEST_ACCOUNT_ID) {
+      process.env.HARVEST_ACCOUNT_ID = HARVEST_ACCOUNT_ID;
+    } else {
+      delete process.env.HARVEST_ACCOUNT_ID;
+    }
+  });
+
+  it('returns 500 if HubSpot env vars missing', async () => {
+    const { HUBSPOT_API_KEY } = process.env;
+    delete process.env.HUBSPOT_API_KEY;
+
+    const appLocal = express();
+    appLocal.use(express.json());
+    appLocal.use('/api', createApiRouter());
+
+    const res = await request(appLocal).post('/api/sync/hubspot');
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/HUBSPOT_API_KEY/);
+
+    if (HUBSPOT_API_KEY) {
+      process.env.HUBSPOT_API_KEY = HUBSPOT_API_KEY;
+    } else {
+      delete process.env.HUBSPOT_API_KEY;
+    }
+  });
+
+  it('returns 500 if SFT env vars missing', async () => {
+    const { MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET } = process.env;
+    delete process.env.MS_TENANT_ID;
+    delete process.env.MS_CLIENT_ID;
+    delete process.env.MS_CLIENT_SECRET;
+
+    const appLocal = express();
+    appLocal.use(express.json());
+    appLocal.use('/api', createApiRouter());
+
+    const res = await request(appLocal)
+      .post('/api/sync/sft')
+      .send({ month: '2024-01' });
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/MS_TENANT_ID|MS_CLIENT_ID|MS_CLIENT_SECRET/);
+
+    if (MS_TENANT_ID) {
+      process.env.MS_TENANT_ID = MS_TENANT_ID;
+    } else {
+      delete process.env.MS_TENANT_ID;
+    }
+    if (MS_CLIENT_ID) {
+      process.env.MS_CLIENT_ID = MS_CLIENT_ID;
+    } else {
+      delete process.env.MS_CLIENT_ID;
+    }
+    if (MS_CLIENT_SECRET) {
+      process.env.MS_CLIENT_SECRET = MS_CLIENT_SECRET;
+    } else {
+      delete process.env.MS_CLIENT_SECRET;
+    }
+  });
 });

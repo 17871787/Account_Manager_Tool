@@ -2,11 +2,17 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { ExportService } from '../../services/export.service';
 import { InvoiceExport } from '../../types';
+import { captureException } from '../../utils/sentry';
 
 const router = Router();
 const exportService = new ExportService();
 
 router.post('/export/invoice', async (req: Request, res: Response) => {
+  let clientId: string;
+  let projectId: string;
+  let startDate: string;
+  let endDate: string;
+  let userId: string;
   try {
     const schema = z.object({
       clientId: z.string(),
@@ -19,7 +25,7 @@ router.post('/export/invoice', async (req: Request, res: Response) => {
         .refine((v) => !Number.isNaN(Date.parse(v)), { message: 'Invalid endDate' }),
       userId: z.string()
     });
-    const { clientId, projectId, startDate, endDate, userId } = schema.parse(req.body);
+    ({ clientId, projectId, startDate, endDate, userId } = schema.parse(req.body));
     const invoiceExport = await exportService.generateInvoiceExport(
       clientId,
       projectId,
@@ -32,7 +38,14 @@ router.post('/export/invoice', async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Export error:', error);
+    captureException(error, {
+      operation: 'exportInvoice',
+      clientId,
+      projectId,
+      startDate,
+      endDate,
+      userId,
+    });
     res.status(500).json({ error: 'Failed to generate invoice export' });
   }
 });
@@ -48,7 +61,7 @@ router.post('/export/csv', async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('CSV export error:', error);
+    captureException(error, { operation: 'exportCSV' });
     res.status(500).json({ error: 'Failed to export CSV' });
   }
 });
@@ -66,7 +79,11 @@ router.get('/budget/:projectId', async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Budget error:', error);
+    captureException(error, {
+      operation: 'getBudgetVsBurn',
+      projectId: req.params.projectId,
+      month: req.query.month,
+    });
     res.status(500).json({ error: 'Failed to get budget data' });
   }
 });
@@ -84,7 +101,11 @@ router.get('/report/monthly/:clientId', async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Report error:', error);
+    captureException(error, {
+      operation: 'getMonthlyReport',
+      clientId: req.params.clientId,
+      month: req.query.month,
+    });
     res.status(500).json({ error: 'Failed to generate monthly report' });
   }
 });
