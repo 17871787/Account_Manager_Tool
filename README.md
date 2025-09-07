@@ -50,3 +50,44 @@ This tool provides:
 - Exception detection
 - Budget vs burn dashboards
 - Invoice-ready CSV exports
+## Development
+
+### Testing
+
+Run the full test suite:
+
+```
+npm test
+```
+
+Watch tests on change:
+
+```
+npm run test:watch
+```
+
+Generate coverage reports:
+
+```
+npm run test:coverage
+```
+
+### Linting and Type Checking
+
+Check for lint issues:
+
+```
+npm run lint
+```
+
+Automatically fix lint problems:
+
+```
+npm run lint:fix
+```
+
+Verify TypeScript types:
+
+```
+npm run typecheck
+```
