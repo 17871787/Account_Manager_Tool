@@ -29,12 +29,14 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "noEmit": true
   },
   "include": [
     "next-env.d.ts",
     "app/**/*.{ts,tsx}",
-    "src/**/*.ts"
+    "src/**/*.ts",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
