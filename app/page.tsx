@@ -33,9 +33,11 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+import Link from "next/link";
 import { mockApiService } from '../src/services/mockData';
 
 // Metric Card Component
+import { HarvestSummary } from "./components/HarvestSummary";
 function MetricCard({ 
   title, 
   value, 
@@ -213,7 +215,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics */}
-      <Grid columns="4" gap="4" className="mb-8">
+      <Grid columns="5" gap="4" className="mb-8">
         <MetricCard
           title="Total Revenue"
           value={`£${totalRevenue.toLocaleString()}`}
@@ -242,6 +244,13 @@ export default function Dashboard() {
           icon={Clock}
           trend="up"
         />
+        <MetricCard
+          title="Weekly Hours"
+          value="1.5h"
+          change="This week"
+          icon={Clock}
+          trend="neutral"
+        />
       </Grid>
 
       {/* Tabs for different views */}
@@ -255,6 +264,7 @@ export default function Dashboard() {
               <Badge color="red" className="ml-2">{exceptions.length}</Badge>
             )}
           </Tabs.Trigger>
+          <Tabs.Trigger value="timetracking">Time Tracking</Tabs.Trigger>
           <Tabs.Trigger value="clients">Clients</Tabs.Trigger>
         </Tabs.List>
 
@@ -486,6 +496,51 @@ export default function Dashboard() {
                   </Card>
                 );
               })}
+            </Grid>
+          </Tabs.Content>
+
+          {/* Time Tracking Tab */}
+          <Tabs.Content value="timetracking">
+            <Grid columns="2" gap="4">
+              <div className="col-span-2">
+                <HarvestSummary />
+              </div>
+              <Card className="p-4">
+                <Flex direction="column" gap="3">
+                  <Text size="4" weight="bold">Quick Actions</Text>
+                  <Flex direction="column" gap="2">
+                    <Link href="/harvest">
+                      <Button variant="soft" className="w-full">
+                        <Clock className="mr-2 h-4 w-4" />
+                        View Full Time Entries
+                      </Button>
+                    </Link>
+                    <Button variant="soft" disabled className="w-full">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Export Time Report (Coming Soon)
+                    </Button>
+                  </Flex>
+                </Flex>
+              </Card>
+              <Card className="p-4">
+                <Flex direction="column" gap="3">
+                  <Text size="4" weight="bold">Integration Status</Text>
+                  <Flex direction="column" gap="2">
+                    <Flex justify="between">
+                      <Text size="2">Harvest API</Text>
+                      <Badge color="green">Connected</Badge>
+                    </Flex>
+                    <Flex justify="between">
+                      <Text size="2">Account</Text>
+                      <Text size="2" weight="medium">Cinder Hill</Text>
+                    </Flex>
+                    <Flex justify="between">
+                      <Text size="2">Last Sync</Text>
+                      <Text size="2" color="gray">Just now</Text>
+                    </Flex>
+                  </Flex>
+                </Flex>
+              </Card>
             </Grid>
           </Tabs.Content>
         </Box>
