@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import formidable from 'formidable';
 import * as XLSX from 'xlsx';
 import { parse } from 'csv-parse/sync';
 import fs from 'fs/promises';
 import path from 'path';
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
 interface Deal {
   id?: string;
