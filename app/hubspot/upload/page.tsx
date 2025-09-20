@@ -1,4 +1,4 @@
-import DealsUploader from '@/app/components/DealsUploader';
+import DealsUploader from '../../components/DealsUploader';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
