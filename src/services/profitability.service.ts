@@ -1,4 +1,4 @@
-import { ProfitabilityMetric } from '../types';
+import { AppError, ProfitabilityMetric } from '../types';
 import { query } from '../models/database';
 import { format } from 'date-fns';
 
@@ -85,7 +85,15 @@ export class ProfitabilityService {
       [clientId, projectId]
     );
 
-    const { client_name, project_name } = namesResult.rows[0];
+    const nameRow = namesResult.rows[0];
+
+    if (!nameRow) {
+      const error = new Error('Client or project not found') as AppError;
+      error.status = 404;
+      throw error;
+    }
+
+    const { client_name, project_name } = nameRow;
 
     const metric: ProfitabilityMetric = {
       month: monthStr,

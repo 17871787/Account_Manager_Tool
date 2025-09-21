@@ -84,6 +84,39 @@ describe('ProfitabilityService', () => {
       expect(result.marginPercentage).toBe(0);
       expect(result.margin).toBe(-15000);
     });
+
+    it('should throw when client or project names are missing', async () => {
+      querySpy.mockImplementation((sql: string) => {
+        if (sql.includes('time_entries')) {
+          return Promise.resolve({
+            rows: [{
+              billable_cost: '10000',
+              exclusion_cost: '2000',
+              exception_count: '1'
+            }]
+          });
+        }
+
+        if (sql.includes('sft_revenue')) {
+          return Promise.resolve({
+            rows: [{ recognised_revenue: '15000' }]
+          });
+        }
+
+        if (sql.includes('clients')) {
+          return Promise.resolve({ rows: [] });
+        }
+
+        return Promise.resolve({ rows: [] });
+      });
+
+      await expect(
+        service.calculateProfitability('client-id', 'project-id', new Date('2024-01-01'))
+      ).rejects.toMatchObject({
+        message: 'Client or project not found',
+        status: 404
+      });
+    });
   });
 
   describe('backTestAccuracy', () => {
