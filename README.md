@@ -135,12 +135,33 @@ DATABASE_URL=postgresql://user:password@localhost:5432/am_copilot
 # API Keys
 HARVEST_ACCESS_TOKEN=your_harvest_token
 HARVEST_ACCOUNT_ID=your_account_id
+HARVEST_RETRY_MAX_ATTEMPTS=5
+HARVEST_RETRY_BASE_DELAY_MS=1000
+HARVEST_RETRY_MAX_DELAY_MS=60000
 HUBSPOT_API_KEY=your_hubspot_key
 
 # Optional
 SENTRY_DSN=your_sentry_dsn
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
+
+### Harvest API retry policy
+
+The Harvest connector automatically retries `getTimeEntries` requests when Harvest returns `429` (rate limited) or `503` (service unavailable) responses. The retry logic:
+
+- honors the `Retry-After` header when provided and waits at least that long before retrying
+- applies exponential backoff between attempts and caps the delay at a configurable maximum
+- aborts when the configured maximum number of attempts is reached, surfacing retry metrics in the API response
+
+You can tune the behaviour with environment variables:
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `HARVEST_RETRY_MAX_ATTEMPTS` | Maximum attempts per Harvest request (including the first call). | `5` |
+| `HARVEST_RETRY_BASE_DELAY_MS` | Initial wait time (ms) before the first retry. | `1000` |
+| `HARVEST_RETRY_MAX_DELAY_MS` | Maximum wait time (ms) applied between retries. | `60000` |
+
+Responses from `/api/sync/harvest` include retry metrics so operators can tell when retries were used or exhausted.
 
 ## Development
 
