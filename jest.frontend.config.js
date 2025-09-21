@@ -30,7 +30,11 @@ const config = {
   },
   displayName: 'frontend',
   testEnvironment: 'jsdom',
-  testPathIgnorePatterns: ['<rootDir>/src/api/', '<rootDir>/src/connectors/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/src/api/',
+    '<rootDir>/src/connectors/',
+    '<rootDir>/app/api/',
+  ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };
 

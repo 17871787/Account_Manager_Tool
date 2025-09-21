@@ -31,6 +31,8 @@ const config = {
     '<rootDir>/src/api/**/?(*.)+(spec|test).+(ts|tsx|js)',
     '<rootDir>/src/connectors/**/__tests__/**/*.+(ts|tsx|js)',
     '<rootDir>/src/connectors/**/?(*.)+(spec|test).+(ts|tsx|js)',
+    '<rootDir>/app/api/**/__tests__/**/*.+(ts|tsx|js)',
+    '<rootDir>/app/api/**/?(*.)+(spec|test).+(ts|tsx|js)',
   ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };
