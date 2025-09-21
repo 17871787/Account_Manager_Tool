@@ -1,0 +1,1070 @@
+{
+  "config": {
+    "rootDir": "C:/Users/jtowe/Account_Manager_Tool",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/jtowe/Account_Manager_Tool/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "C:/Users/jtowe/Account_Manager_Tool",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 8,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "tests\\comprehensive-review.spec.ts",
+      "file": "tests/comprehensive-review.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Comprehensive Application Review",
+          "file": "tests/comprehensive-review.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Main Dashboard",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 5,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should load main page successfully",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "timedOut",
+                          "duration": 35081,
+                          "error": {
+                            "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                            "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                          },
+                          "errors": [
+                            {
+                              "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                            },
+                            {
+                              "location": {
+                                "file": "C:\\Users\\jtowe\\Account_Manager_Tool\\tests\\comprehensive-review.spec.ts",
+                                "column": 18,
+                                "line": 7
+                              },
+                              "message": "Error: page.goto: net::ERR_ABORTED; maybe frame was detached?\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"load\"\u001b[22m\n\n\n   5 |   test.describe('Main Dashboard', () => {\n   6 |     test('should load main page successfully', async ({ page }) => {\n>  7 |       await page.goto('http://localhost:3000');\n     |                  ^\n   8 |       await expect(page).toHaveTitle(/AM Copilot/);\n   9 |\n  10 |       // Check for main navigation elements\n    at C:\\Users\\jtowe\\Account_Manager_Tool\\tests\\comprehensive-review.spec.ts:7:18"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:49:10.860Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-d8d122eb93e080404b38",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 6,
+                  "column": 9
+                },
+                {
+                  "title": "should have working navigation links",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 12459,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:49:47.363Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-b47f389bceb8001c00b1",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 18,
+                  "column": 9
+                },
+                {
+                  "title": "should be responsive",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2730,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:49:59.964Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-9110d63d327a4db4ed1f",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 38,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Harvest Integration",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 55,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should load Harvest dashboard",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6537,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:02.757Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-db3c6879229ba2e449ce",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 56,
+                  "column": 9
+                },
+                {
+                  "title": "should have refresh functionality",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "timedOut",
+                          "duration": 30024,
+                          "error": {
+                            "message": "\u001b[31mTest timeout of 30000ms exceeded while setting up \"page\".\u001b[39m",
+                            "stack": "\u001b[31mTest timeout of 30000ms exceeded while setting up \"page\".\u001b[39m"
+                          },
+                          "errors": [
+                            {
+                              "message": "\u001b[31mTest timeout of 30000ms exceeded while setting up \"page\".\u001b[39m"
+                            },
+                            {
+                              "message": "Error: browserContext.newPage: Test timeout of 30000ms exceeded."
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:09.342Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-d6742d1f9e857d35b0f1",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 70,
+                  "column": 9
+                },
+                {
+                  "title": "should display time entries or appropriate message",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "failed",
+                          "duration": 0,
+                          "error": {
+                            "message": "Error: worker process exited unexpectedly (code=3221225794, signal=null)"
+                          },
+                          "errors": [
+                            {
+                              "message": "Error: worker process exited unexpectedly (code=3221225794, signal=null)"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-d32607032d732a02a15b",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 82,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "HubSpot Integration",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 96,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should load HubSpot dashboard",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-4c3a514698f0f82e93fa",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 97,
+                  "column": 9
+                },
+                {
+                  "title": "should switch between tabs",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-340438828f8dce167419",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 111,
+                  "column": 9
+                },
+                {
+                  "title": "should have import functionality link",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-12dd2e766ca93b283fa7",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 136,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "HubSpot Upload Feature",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 152,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should load upload page",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-bed201113d24099efbf3",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 153,
+                  "column": 9
+                },
+                {
+                  "title": "should have drag and drop area",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-7b2ca6d5d4943b05d456",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 164,
+                  "column": 9
+                },
+                {
+                  "title": "should have download template button",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-e11ed706134aca6eda60",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 171,
+                  "column": 9
+                },
+                {
+                  "title": "should have clear all functionality",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-6edc3a5beb2eaeb3eefc",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 179,
+                  "column": 9
+                },
+                {
+                  "title": "should display instructions",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-e449b79a295b0e3b612e",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 188,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "API Endpoints",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 197,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should respond to Harvest API endpoint",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-ae1540453ceefc4f868e",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 198,
+                  "column": 9
+                },
+                {
+                  "title": "should respond to HubSpot test endpoint",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-fb270c02de82b1dbb300",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 203,
+                  "column": 9
+                },
+                {
+                  "title": "should respond to HubSpot upload endpoint",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-7ebb8fcd602e30c59490",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 208,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Error Handling",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 219,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should handle 404 pages gracefully",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-369fee855443ecde2376",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 220,
+                  "column": 9
+                },
+                {
+                  "title": "should handle API errors gracefully",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-337f88f357c12e0cde4b",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 228,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Performance",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 240,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should load main page within acceptable time",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-2f6186e96ada367984d9",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 241,
+                  "column": 9
+                },
+                {
+                  "title": "should have no console errors on main pages",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-4f577f98c793350da3e4",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 251,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Accessibility",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 274,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should have proper heading hierarchy",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-14f50b1499722fdbf41c",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 275,
+                  "column": 9
+                },
+                {
+                  "title": "should have alt text for images",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-3ba944b80c60a33ba11e",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 283,
+                  "column": 9
+                },
+                {
+                  "title": "should have proper button labels",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": -1,
+                          "parallelIndex": -1,
+                          "status": "skipped",
+                          "duration": 0,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-09-20T21:50:40.037Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "bbef626d2c7c5376a4c5-eece267a95ae59ec078a",
+                  "file": "tests/comprehensive-review.spec.ts",
+                  "line": 297,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Data Integration Tests",
+          "file": "tests/comprehensive-review.spec.ts",
+          "line": 315,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should handle CSV upload flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-20T21:50:40.037Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "bbef626d2c7c5376a4c5-07b2750498f005983b6d",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 316,
+              "column": 7
+            },
+            {
+              "title": "should preserve data after refresh",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-20T21:50:40.037Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "bbef626d2c7c5376a4c5-0f25e9739afb36d96570",
+              "file": "tests/comprehensive-review.spec.ts",
+              "line": 337,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-09-20T21:49:08.601Z",
+    "duration": 91438.528,
+    "expected": 3,
+    "skipped": 20,
+    "unexpected": 3,
+    "flaky": 0
+  }
+}
