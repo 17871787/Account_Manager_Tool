@@ -1,17 +1,12 @@
 import request from 'supertest';
 import express from 'express';
 import createApiRouter from '../routes';
+import { DEFAULT_BATCH_SIZE } from '../sync/batchInsert';
 import { setPool } from '../../models/database';
 import { Pool, PoolClient } from 'pg';
 
-const mockClient = {
-  query: jest.fn(),
-  release: jest.fn(),
-} as unknown as PoolClient;
-
-const mockPool = {
-  connect: jest.fn(),
-} as unknown as Pool;
+let mockClient: jest.Mocked<PoolClient>;
+let mockPool: jest.Mocked<Pool>;
 
 describe('API endpoints', () => {
   let connectSpy: jest.SpyInstance;
@@ -22,8 +17,13 @@ describe('API endpoints', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockClient.query.mockReset().mockResolvedValue({ rows: [] });
-    mockClient.release.mockReset();
+    mockClient = {
+      query: jest.fn().mockResolvedValue({ rows: [] }),
+      release: jest.fn(),
+    } as unknown as jest.Mocked<PoolClient>;
+    mockPool = {
+      connect: jest.fn().mockResolvedValue(mockClient),
+    } as unknown as jest.Mocked<Pool>;
     setPool(mockPool as unknown as Pool);
     connectSpy = jest.spyOn(mockPool, 'connect').mockResolvedValue(mockClient);
 
@@ -97,16 +97,18 @@ describe('API endpoints', () => {
       ([query]) => typeof query === 'string' && query.includes('INSERT INTO time_entries')
     );
 
-    expect(insertCalls).toHaveLength(Math.ceil(entries.length / 1000));
+    expect(insertCalls).toHaveLength(Math.ceil(entries.length / DEFAULT_BATCH_SIZE));
+
+    const fullChunks = Math.floor(entries.length / DEFAULT_BATCH_SIZE);
+    const remainder = entries.length % DEFAULT_BATCH_SIZE || DEFAULT_BATCH_SIZE;
 
     insertCalls.forEach((call, index) => {
       const params = call[1] as unknown[];
       const expectedLength =
-        index < Math.floor(entries.length / 1000)
-          ? 1000 * 5
-          : (entries.length % 1000) * 5;
+        index < fullChunks ? DEFAULT_BATCH_SIZE * 5 : remainder * 5;
       expect(params).toHaveLength(expectedLength);
     });
+
   });
 
   it('syncs HubSpot data', async () => {

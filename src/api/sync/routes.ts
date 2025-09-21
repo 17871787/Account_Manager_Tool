@@ -5,7 +5,7 @@ import { SFTConnector } from '../../connectors/sft.connector';
 import { HubSpotConnector } from '../../connectors/hubspot.connector';
 import { getClient } from '../../models/database';
 import { captureException } from '../../utils/sentry';
-import { buildInsertQuery } from '../../utils/db';
+import { batchInsert } from './batchInsert';
 
 export interface SyncRouterDeps {
   harvestConnector?: HarvestConnector;
@@ -68,7 +68,8 @@ export default function createSyncRouter({
             entry.notes,
           ]);
 
-          const { query, params } = buildInsertQuery(
+          await batchInsert(
+            client,
             'time_entries',
             ['harvest_entry_id', 'date', 'hours', 'billable_flag', 'notes'],
             records,
@@ -77,8 +78,6 @@ export default function createSyncRouter({
               billable_flag = EXCLUDED.billable_flag,
               notes = EXCLUDED.notes`
           );
-
-          await client.query(query, params);
         }
 
         await client.query('COMMIT');
@@ -98,7 +97,7 @@ export default function createSyncRouter({
         });
         res.status(500).json({ error: 'Failed to sync Harvest data' });
       } finally {
-        client.release()
+        client.release();
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -184,14 +183,13 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
             rev.recognisedRevenue,
           ]);
 
-          const { query, params } = buildInsertQuery(
+          await batchInsert(
+            client,
             'sft_revenue',
             ['client_id', 'project_id', 'month', 'recognised_revenue'],
             records,
             'ON CONFLICT DO NOTHING'
           );
-
-          await client.query(query, params);
           processed = revenues.length;
         }
 
