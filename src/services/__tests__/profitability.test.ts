@@ -1,22 +1,21 @@
+jest.mock('../../models/database', () => ({
+  query: jest.fn()
+}));
+
 import { ProfitabilityService } from '../profitability.service';
 import * as db from '../../models/database';
 
 describe('ProfitabilityService', () => {
   let service: ProfitabilityService;
-  let querySpy: jest.SpyInstance;
+  const queryMock = db.query as jest.MockedFunction<typeof db.query>;
 
   beforeEach(() => {
     service = new ProfitabilityService();
-    querySpy = jest.spyOn(db, 'query');
-  });
-
-  afterEach(() => {
-    querySpy.mockRestore();
   });
 
   describe('calculateProfitability', () => {
     it('should calculate profitability correctly', async () => {
-      querySpy.mockImplementation((sql: string) => {
+      queryMock.mockImplementation((sql: string) => {
         if (sql.includes('time_entries')) {
           return Promise.resolve({
             rows: [{
@@ -64,7 +63,7 @@ describe('ProfitabilityService', () => {
     });
 
     it('should handle zero revenue gracefully', async () => {
-      querySpy.mockImplementation(() => Promise.resolve({
+      queryMock.mockImplementation(() => Promise.resolve({
         rows: [{
           billable_cost: '10000',
           exclusion_cost: '5000',
@@ -119,9 +118,49 @@ describe('ProfitabilityService', () => {
     });
   });
 
+  describe('getClientProfitabilityTrend', () => {
+    it('should query profitability metrics within the requested interval', async () => {
+      const mockRows = [
+        {
+          month: new Date('2024-03-01'),
+          client_name: 'Client A',
+          project_name: 'Project A',
+          billable_cost: '1000',
+          exclusion_cost: '100',
+          recognised_revenue: '2000',
+          margin: '900',
+          margin_percentage: '45',
+          exceptions_count: 1
+        }
+      ];
+
+      queryMock.mockResolvedValue({ rows: mockRows });
+
+      const result = await service.getClientProfitabilityTrend('client-id', 3);
+
+      expect(queryMock).toHaveBeenCalledTimes(1);
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('$2::interval');
+      expect(params).toEqual(['client-id', '3 months']);
+      expect(result).toEqual([
+        {
+          month: '2024-03',
+          client: 'Client A',
+          project: 'Project A',
+          billableCost: 1000,
+          exclusionCost: 100,
+          recognisedRevenue: 2000,
+          margin: 900,
+          marginPercentage: 45,
+          exceptionsCount: 1
+        }
+      ]);
+    });
+  });
+
   describe('backTestAccuracy', () => {
     it('should validate margin within tolerance', async () => {
-      querySpy.mockImplementation(() => Promise.resolve({
+      queryMock.mockImplementation(() => Promise.resolve({
         rows: [{
           billable_cost: '60000',
           exclusion_cost: '0',
@@ -144,7 +183,7 @@ describe('ProfitabilityService', () => {
     });
 
     it('should return infinite variance when expected margin is 0', async () => {
-      querySpy.mockImplementation(() => Promise.resolve({
+      queryMock.mockImplementation(() => Promise.resolve({
         rows: [{
           billable_cost: '0',
           exclusion_cost: '0',
