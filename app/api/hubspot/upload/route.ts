@@ -1,19 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { parse } from 'csv-parse/sync';
-import fs from 'fs/promises';
-import path from 'path';
+import {
+  clearStoredDeals,
+  Deal,
+  loadStoredDeals,
+  storeDeals,
+} from './storage';
 
-interface Deal {
-  id?: string;
-  name: string;
-  stage?: string;
-  amount?: number;
-  closeDate?: string;
-  owner?: string;
-  company?: string;
-  status?: string;
-  [key: string]: any;
+type RawDealRow = Record<string, unknown>;
+
+function getFirstString(
+  row: RawDealRow,
+  keys: string[],
+  fallback: string
+): string {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return fallback;
+}
+
+function getFirstNumber(
+  row: RawDealRow,
+  keys: string[],
+  fallback: number
+): number {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === 'number') {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+  }
+  return fallback;
 }
 
 export async function POST(request: NextRequest) {
@@ -39,19 +67,35 @@ export async function POST(request: NextRequest) {
       const workbook = XLSX.read(buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const rawData = XLSX.utils.sheet_to_json(worksheet);
+      const rawData = XLSX.utils.sheet_to_json<RawDealRow>(worksheet);
 
       // Map Excel data to deals format
-      deals = rawData.map((row: any, index: number) => ({
-        id: row['Deal ID'] || row['ID'] || `imported_${Date.now()}_${index}`,
-        name: row['Deal Name'] || row['Name'] || row['Title'] || `Deal ${index + 1}`,
-        stage: row['Deal Stage'] || row['Stage'] || row['Status'] || 'Unknown',
-        amount: parseFloat(row['Amount'] || row['Value'] || row['Deal Amount'] || '0'),
-        closeDate: row['Close Date'] || row['Expected Close'] || row['Date'] || new Date().toISOString(),
-        owner: row['Owner'] || row['Deal Owner'] || row['Assigned To'] || 'Unassigned',
-        company: row['Company'] || row['Account'] || row['Client'] || '',
-        status: row['Status'] || 'Open',
-        ...row // Include any additional fields
+      deals = rawData.map((row, index: number) => ({
+        id: getFirstString(row, ['Deal ID', 'ID'], `imported_${Date.now()}_${index}`),
+        name: getFirstString(
+          row,
+          ['Deal Name', 'Name', 'Title'],
+          `Deal ${index + 1}`
+        ),
+        stage: getFirstString(row, ['Deal Stage', 'Stage', 'Status'], 'Unknown'),
+        amount: getFirstNumber(
+          row,
+          ['Amount', 'Value', 'Deal Amount'],
+          0
+        ),
+        closeDate: getFirstString(
+          row,
+          ['Close Date', 'Expected Close', 'Date'],
+          new Date().toISOString()
+        ),
+        owner: getFirstString(
+          row,
+          ['Owner', 'Deal Owner', 'Assigned To'],
+          'Unassigned'
+        ),
+        company: getFirstString(row, ['Company', 'Account', 'Client'], ''),
+        status: getFirstString(row, ['Status'], 'Open'),
+        ...row, // Include any additional fields
       }));
     } else if (fileName.endsWith('.csv')) {
       // Parse CSV file
@@ -63,16 +107,32 @@ export async function POST(request: NextRequest) {
       });
 
       // Map CSV data to deals format
-      deals = records.map((row: any, index: number) => ({
-        id: row['Deal ID'] || row['ID'] || `imported_${Date.now()}_${index}`,
-        name: row['Deal Name'] || row['Name'] || row['Title'] || `Deal ${index + 1}`,
-        stage: row['Deal Stage'] || row['Stage'] || row['Status'] || 'Unknown',
-        amount: parseFloat(row['Amount'] || row['Value'] || row['Deal Amount'] || '0'),
-        closeDate: row['Close Date'] || row['Expected Close'] || row['Date'] || new Date().toISOString(),
-        owner: row['Owner'] || row['Deal Owner'] || row['Assigned To'] || 'Unassigned',
-        company: row['Company'] || row['Account'] || row['Client'] || '',
-        status: row['Status'] || 'Open',
-        ...row // Include any additional fields
+      deals = (records as RawDealRow[]).map((row, index: number) => ({
+        id: getFirstString(row, ['Deal ID', 'ID'], `imported_${Date.now()}_${index}`),
+        name: getFirstString(
+          row,
+          ['Deal Name', 'Name', 'Title'],
+          `Deal ${index + 1}`
+        ),
+        stage: getFirstString(row, ['Deal Stage', 'Stage', 'Status'], 'Unknown'),
+        amount: getFirstNumber(
+          row,
+          ['Amount', 'Value', 'Deal Amount'],
+          0
+        ),
+        closeDate: getFirstString(
+          row,
+          ['Close Date', 'Expected Close', 'Date'],
+          new Date().toISOString()
+        ),
+        owner: getFirstString(
+          row,
+          ['Owner', 'Deal Owner', 'Assigned To'],
+          'Unassigned'
+        ),
+        company: getFirstString(row, ['Company', 'Account', 'Client'], ''),
+        status: getFirstString(row, ['Status'], 'Open'),
+        ...row, // Include any additional fields
       }));
     } else {
       return NextResponse.json(
@@ -81,20 +141,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store deals in a temporary JSON file (in production, use a proper database)
-    const dataDir = path.join(process.cwd(), 'data');
-    await fs.mkdir(dataDir, { recursive: true });
-
-    const dealsFilePath = path.join(dataDir, 'imported_deals.json');
-
-    // Read existing deals if any
-    let existingDeals: Deal[] = [];
-    try {
-      const existingData = await fs.readFile(dealsFilePath, 'utf-8');
-      existingDeals = JSON.parse(existingData);
-    } catch (error) {
-      // File doesn't exist yet, that's okay
-    }
+    const existingDeals = await loadStoredDeals();
 
     // Merge new deals with existing ones (update if ID matches, add if new)
     const dealsMap = new Map(existingDeals.map(deal => [deal.id, deal]));
@@ -104,8 +151,7 @@ export async function POST(request: NextRequest) {
 
     const mergedDeals = Array.from(dealsMap.values());
 
-    // Save merged deals
-    await fs.writeFile(dealsFilePath, JSON.stringify(mergedDeals, null, 2));
+    await storeDeals(mergedDeals);
 
     return NextResponse.json({
       success: true,
@@ -128,28 +174,15 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to retrieve imported deals
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    const dataDir = path.join(process.cwd(), 'data');
-    const dealsFilePath = path.join(dataDir, 'imported_deals.json');
+    const deals = await loadStoredDeals();
 
-    try {
-      const dealsData = await fs.readFile(dealsFilePath, 'utf-8');
-      const deals = JSON.parse(dealsData);
-
-      return NextResponse.json({
-        success: true,
-        deals,
-        count: deals.length,
-      });
-    } catch (error) {
-      // No deals imported yet
-      return NextResponse.json({
-        success: true,
-        deals: [],
-        count: 0,
-      });
-    }
+    return NextResponse.json({
+      success: true,
+      deals,
+      count: deals.length,
+    });
   } catch (error) {
     console.error('Error fetching deals:', error);
     return NextResponse.json(
@@ -163,16 +196,9 @@ export async function GET(request: NextRequest) {
 }
 
 // DELETE endpoint to clear imported deals
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   try {
-    const dataDir = path.join(process.cwd(), 'data');
-    const dealsFilePath = path.join(dataDir, 'imported_deals.json');
-
-    try {
-      await fs.unlink(dealsFilePath);
-    } catch (error) {
-      // File might not exist, that's okay
-    }
+    await clearStoredDeals();
 
     return NextResponse.json({
       success: true,
