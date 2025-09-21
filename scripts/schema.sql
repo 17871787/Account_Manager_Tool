@@ -116,6 +116,9 @@ CREATE TABLE IF NOT EXISTS profitability_metrics (
     calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_profitability_month_client_project
+    ON profitability_metrics (month, client_id, project_id);
+
 -- Exceptions table
 CREATE TABLE IF NOT EXISTS exceptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
