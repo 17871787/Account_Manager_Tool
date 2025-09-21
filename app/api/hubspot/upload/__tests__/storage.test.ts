@@ -1,10 +1,13 @@
-import { setPool } from '../../../../../src/models/database';
-import {
-  clearStoredDeals,
-  loadStoredDeals,
-  storeDeals,
-  Deal,
-} from '../storage';
+import type { Deal } from '../storage';
+
+type StorageModule = typeof import('../storage');
+type DatabaseModule = typeof import('../../../../../src/models/database');
+
+let clearStoredDeals: StorageModule['clearStoredDeals'];
+let loadStoredDeals: StorageModule['loadStoredDeals'];
+let storeDeals: StorageModule['storeDeals'];
+let store: InMemoryDealStore;
+let setPool: DatabaseModule['setPool'];
 
 interface StoredDeal {
   dealId: string;
@@ -15,6 +18,11 @@ interface StoredDeal {
 class InMemoryDealStore {
   private deals = new Map<string, StoredDeal>();
   private snapshot: Map<string, StoredDeal> | null = null;
+  private failInitializationOnce = false;
+
+  failNextInitialization() {
+    this.failInitializationOnce = true;
+  }
 
   async handleQuery(text: string, params: unknown[] = []) {
     const normalized = text.trim();
@@ -38,6 +46,10 @@ class InMemoryDealStore {
     }
 
     if (normalized.startsWith('CREATE TABLE')) {
+      if (this.failInitializationOnce) {
+        this.failInitializationOnce = false;
+        throw new Error('Simulated initialization failure');
+      }
       return { rows: [] };
     }
 
@@ -101,10 +113,13 @@ class MockPool {
 }
 
 describe('HubSpot durable deal storage', () => {
-  beforeEach(() => {
-    const store = new InMemoryDealStore();
+  beforeEach(async () => {
+    jest.resetModules();
+    ({ setPool } = await import('../../../../../src/models/database'));
+    store = new InMemoryDealStore();
     const pool = new MockPool(store);
     setPool(pool as unknown as any);
+    ({ clearStoredDeals, loadStoredDeals, storeDeals } = await import('../storage'));
   });
 
   it('persists deals and returns them in insertion order', async () => {
@@ -139,5 +154,19 @@ describe('HubSpot durable deal storage', () => {
 
     const stored = await loadStoredDeals();
     expect(stored).toHaveLength(0);
+  });
+
+  it('recovers after an initialization failure', async () => {
+    store.failNextInitialization();
+
+    await expect(loadStoredDeals()).rejects.toThrow('Simulated initialization failure');
+
+    const deals: Deal[] = [{ id: 'recovered', name: 'Recovered Deal' }];
+    await expect(storeDeals(deals)).resolves.toBeUndefined();
+
+    const stored = await loadStoredDeals();
+    expect(stored).toEqual([
+      expect.objectContaining({ id: 'recovered', name: 'Recovered Deal' }),
+    ]);
   });
 });

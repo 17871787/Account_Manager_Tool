@@ -1,6 +1,7 @@
 import { PoolClient } from 'pg';
 import { getPool, query } from '../../../../src/models/database';
 import { buildInsertQuery } from '../../../../src/utils/db';
+import { logger } from '../../../../src/utils/logger';
 
 export interface Deal {
   id?: string;
@@ -17,24 +18,58 @@ export interface Deal {
 const TABLE_NAME = 'hubspot_deal_imports';
 
 let ensureTablePromise: Promise<void> | null = null;
+let ensureTableFailureCount = 0;
 
 async function ensureStorageTable(): Promise<void> {
   if (!ensureTablePromise) {
     ensureTablePromise = (async () => {
-      await query(
-        `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-          deal_id TEXT PRIMARY KEY,
-          data JSONB NOT NULL,
-          sort_order INTEGER NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );`
-      );
+      try {
+        await query(
+          `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+            deal_id TEXT PRIMARY KEY,
+            data JSONB NOT NULL,
+            sort_order INTEGER NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );`
+        );
 
-      await query(
-        `CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_sort_order
-         ON ${TABLE_NAME} (sort_order);`
-      );
+        await query(
+          `CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_sort_order
+           ON ${TABLE_NAME} (sort_order);`
+        );
+
+        if (ensureTableFailureCount > 0) {
+          logger.info(
+            {
+              failureCount: ensureTableFailureCount,
+            },
+            'HubSpot storage table initialized after previous failures'
+          );
+        }
+        ensureTableFailureCount = 0;
+      } catch (error) {
+        ensureTableFailureCount += 1;
+        logger.error(
+          {
+            err: error,
+            failureCount: ensureTableFailureCount,
+          },
+          'Failed to ensure HubSpot storage table'
+        );
+
+        if (ensureTableFailureCount > 1) {
+          logger.warn(
+            {
+              failureCount: ensureTableFailureCount,
+            },
+            'Repeated failures ensuring HubSpot storage table'
+          );
+        }
+
+        ensureTablePromise = null;
+        throw error;
+      }
     })();
   }
 
