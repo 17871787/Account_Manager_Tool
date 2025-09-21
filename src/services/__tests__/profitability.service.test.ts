@@ -52,6 +52,48 @@ describe('ProfitabilityService', () => {
     });
   });
 
+  describe('calculateProfitability', () => {
+    it('resolves and upserts profitability metrics without SQL errors', async () => {
+      const queryMock = query as jest.MockedFunction<typeof query>;
+      queryMock
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              billable_cost: '100',
+              exclusion_cost: '20',
+              exception_count: '1',
+            },
+          ],
+        } as never)
+        .mockResolvedValueOnce({ rows: [{ recognised_revenue: '200' }] } as never)
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              client_name: 'Client A',
+              project_name: 'Project A',
+            },
+          ],
+        } as never)
+        .mockResolvedValueOnce({ rows: [] } as never);
+
+      await expect(
+        service.calculateProfitability('client-1', 'project-1', new Date('2024-01-01'))
+      ).resolves.toMatchObject({
+        month: '2024-01',
+        client: 'Client A',
+        project: 'Project A',
+        billableCost: 100,
+        exclusionCost: 20,
+        recognisedRevenue: 200,
+        margin: 80,
+      });
+
+      const insertCall = queryMock.mock.calls[3];
+      expect(insertCall?.[0]).toContain('INSERT INTO profitability_metrics');
+      expect(insertCall?.[0]).toContain('ON CONFLICT (month, client_id, project_id)');
+    });
+  });
+
   describe('getClientProfitabilityTrend', () => {
     it('runs the trend query without throwing when provided numeric months', async () => {
       const queryMock = query as jest.MockedFunction<typeof query>;

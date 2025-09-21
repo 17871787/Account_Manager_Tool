@@ -12,10 +12,48 @@ async function runMigration() {
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
 
-    // Execute schema
-    await getPool().query(schema);
+    // Execute schema statements individually so special commands (e.g. CREATE INDEX CONCURRENTLY)
+    // are not wrapped in an implicit transaction block.
+    const schemaStatements = schema
+      .split(/;\s*(?:\r?\n|$)/)
+      .map(statement => statement.trim())
+      .filter(statement => statement.length > 0);
+
+    for (const statement of schemaStatements) {
+      const preview = statement.split('\n')[0];
+      console.log(`▶️  Executing schema statement: ${preview}`);
+      await getPool().query(statement);
+    }
 
     console.log('✅ Database schema created successfully');
+
+    const migrationsDir = path.join(__dirname, 'migrations');
+    if (fs.existsSync(migrationsDir)) {
+      const migrationFiles = fs
+        .readdirSync(migrationsDir)
+        .filter(file => file.endsWith('.sql'))
+        .sort();
+
+      for (const migrationFile of migrationFiles) {
+        const migrationPath = path.join(migrationsDir, migrationFile);
+        const migrationSql = fs.readFileSync(migrationPath, 'utf8').trim();
+        if (!migrationSql) {
+          continue;
+        }
+
+        console.log(`▶️  Running migration: ${migrationFile}`);
+        const migrationStatements = migrationSql
+          .split(/;\s*(?:\r?\n|$)/)
+          .map(statement => statement.trim())
+          .filter(statement => statement.length > 0);
+
+        for (const statement of migrationStatements) {
+          const preview = statement.split('\n')[0];
+          console.log(`   → ${preview}`);
+          await getPool().query(statement);
+        }
+      }
+    }
 
     // Insert sample data (optional)
     if (process.argv.includes('--seed')) {
