@@ -1,6 +1,6 @@
-import { promises as fs } from 'fs';
-import os from 'os';
-import path from 'path';
+import { PoolClient } from 'pg';
+import { getPool, query } from '../../../../src/models/database';
+import { buildInsertQuery } from '../../../../src/utils/db';
 
 export interface Deal {
   id?: string;
@@ -14,55 +14,115 @@ export interface Deal {
   [key: string]: unknown;
 }
 
-const STORAGE_ENV_KEY = 'HUBSPOT_DEALS_STORAGE_DIR';
-const STORAGE_FILENAME = 'imported_deals.json';
+const TABLE_NAME = 'hubspot_deal_imports';
 
-function getStorageDirectory() {
-  const baseDir =
-    process.env[STORAGE_ENV_KEY] ?? path.join(os.tmpdir(), 'hubspot-deals');
-  return baseDir;
+let ensureTablePromise: Promise<void> | null = null;
+
+async function ensureStorageTable(): Promise<void> {
+  if (!ensureTablePromise) {
+    ensureTablePromise = (async () => {
+      await query(
+        `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+          deal_id TEXT PRIMARY KEY,
+          data JSONB NOT NULL,
+          sort_order INTEGER NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );`
+      );
+
+      await query(
+        `CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_sort_order
+         ON ${TABLE_NAME} (sort_order);`
+      );
+    })();
+  }
+
+  return ensureTablePromise;
 }
 
-function getStorageFilePath() {
-  return path.join(getStorageDirectory(), STORAGE_FILENAME);
+async function runInTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
-async function ensureStorageDirectory() {
-  await fs.mkdir(getStorageDirectory(), { recursive: true });
-}
+type PersistedDeal = Deal & { id: string };
 
-function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-  return Boolean(error && typeof error === 'object' && 'code' in error);
+function ensureDealId(deal: Deal, index: number): PersistedDeal {
+  if (typeof deal.id === 'string' && deal.id.trim().length > 0) {
+    return deal as PersistedDeal;
+  }
+
+  return {
+    ...deal,
+    id: `generated_${index}`,
+  };
 }
 
 export async function loadStoredDeals(): Promise<Deal[]> {
-  try {
-    const data = await fs.readFile(getStorageFilePath(), 'utf-8');
-    return JSON.parse(data) as Deal[];
-  } catch (error: unknown) {
-    if (isNodeError(error) && error.code === 'ENOENT') {
-      return [];
-    }
-    throw error;
-  }
-}
+  await ensureStorageTable();
 
-export async function storeDeals(deals: Deal[]): Promise<void> {
-  await ensureStorageDirectory();
-  await fs.writeFile(
-    getStorageFilePath(),
-    JSON.stringify(deals, null, 2),
-    'utf-8'
+  const { rows } = await query<{ data: Deal | string }>(
+    `SELECT data FROM ${TABLE_NAME} ORDER BY sort_order ASC`
+  );
+
+  return rows.map((row) =>
+    typeof row.data === 'string' ? (JSON.parse(row.data) as Deal) : row.data
   );
 }
 
-export async function clearStoredDeals(): Promise<void> {
-  try {
-    await fs.unlink(getStorageFilePath());
-  } catch (error: unknown) {
-    if (isNodeError(error) && error.code === 'ENOENT') {
-      return;
-    }
-    throw error;
+export async function storeDeals(deals: Deal[]): Promise<void> {
+  await ensureStorageTable();
+
+  if (deals.length === 0) {
+    await clearStoredDeals();
+    return;
   }
+
+  await runInTransaction(async (client) => {
+    await client.query(`DELETE FROM ${TABLE_NAME}`);
+
+    const normalizedDeals = deals.map((deal, index) => {
+      const persisted = ensureDealId(deal, index);
+      return {
+        persisted,
+        sortOrder: index,
+      };
+    });
+
+    const records = normalizedDeals.map(({ persisted, sortOrder }) => [
+      persisted.id,
+      JSON.stringify(persisted),
+      sortOrder,
+    ]);
+
+    const { query: insertQuery, params } = buildInsertQuery(
+      TABLE_NAME,
+      ['deal_id', 'data', 'sort_order'],
+      records,
+      `ON CONFLICT (deal_id) DO UPDATE SET
+        data = EXCLUDED.data,
+        sort_order = EXCLUDED.sort_order,
+        updated_at = NOW()`
+    );
+
+    await client.query(insertQuery, params);
+  });
+}
+
+export async function clearStoredDeals(): Promise<void> {
+  await ensureStorageTable();
+  await query(`DELETE FROM ${TABLE_NAME}`);
 }

@@ -8,6 +8,8 @@ import {
   storeDeals,
 } from './storage';
 
+export const runtime = 'nodejs';
+
 type RawDealRow = Record<string, unknown>;
 
 function getFirstString(

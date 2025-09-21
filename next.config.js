@@ -1,3 +1,7 @@
+if (typeof process.env.NEXT_PRIVATE_SKIP_LOCKFILE_PATCH === 'undefined') {
+  process.env.NEXT_PRIVATE_SKIP_LOCKFILE_PATCH = '1';
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
