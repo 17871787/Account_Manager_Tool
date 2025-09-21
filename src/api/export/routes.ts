@@ -3,11 +3,24 @@ import { z } from 'zod';
 import { ExportService } from '../../services/export.service';
 import { InvoiceExport } from '../../types';
 import { captureException } from '../../utils/sentry';
+import { createRateLimitMiddleware } from '../../middleware/expressAuth';
 
 const router = Router();
 const exportService = new ExportService();
 
-router.post('/export/invoice', async (req: Request, res: Response) => {
+const invoiceExportLimiter = createRateLimitMiddleware({
+  scope: 'export-invoice',
+  limit: 5,
+  windowMs: 10 * 60 * 1000,
+});
+
+const csvExportLimiter = createRateLimitMiddleware({
+  scope: 'export-csv',
+  limit: 10,
+  windowMs: 10 * 60 * 1000,
+});
+
+router.post('/export/invoice', invoiceExportLimiter, async (req: Request, res: Response) => {
   let clientId: string | undefined;
   let projectId: string | undefined;
   let startDate: string | undefined;
@@ -50,7 +63,7 @@ router.post('/export/invoice', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/export/csv', async (req: Request, res: Response) => {
+router.post('/export/csv', csvExportLimiter, async (req: Request, res: Response) => {
   try {
     const { invoiceExport } = z.object({ invoiceExport: z.unknown() }).parse(req.body);
     const csv = await exportService.exportToCSV(invoiceExport as InvoiceExport);
