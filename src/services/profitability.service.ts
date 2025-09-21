@@ -179,7 +179,7 @@ export class ProfitabilityService {
       JOIN clients c ON pm.client_id = c.id
       JOIN projects p ON pm.project_id = p.id
       WHERE pm.client_id = $1
-        AND pm.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL $2)
+        AND pm.month >= DATE_TRUNC('month', CURRENT_DATE - ($2::interval))
       ORDER BY pm.month DESC`,
       [clientId, `${months} months`]
     );
