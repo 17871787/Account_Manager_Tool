@@ -44,7 +44,7 @@ export default function HubSpotConnectPage() {
             </button>
 
             <div className="text-sm text-gray-500">
-              By connecting, you'll grant this app access to:
+              By connecting, you&apos;ll grant this app access to:
               <ul className="mt-2 text-left space-y-1">
                 <li>• Read and write contacts</li>
                 <li>• Read and write companies</li>

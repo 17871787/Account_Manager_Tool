@@ -43,8 +43,6 @@ export function TimeEntriesTableEnhanced() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const fetchTimeEntries = async () => {
-    console.log('Fetching time entries with:', { from, to, page });
-
     if (!from || !to) {
       setError("Please select both from and to dates");
       return;
@@ -55,11 +53,8 @@ export function TimeEntriesTableEnhanced() {
 
     try {
       const url = `/api/harvest/time-entries?from=${from}&to=${to}&page=${page}`;
-      console.log('Fetching from:', url);
 
       const response = await fetch(url, { cache: "no-store" });
-
-      console.log('Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -68,7 +63,6 @@ export function TimeEntriesTableEnhanced() {
       }
 
       const result = await response.json();
-      console.log('Received data:', result);
       setData(result);
       setLastRefresh(new Date());
     } catch (err) {

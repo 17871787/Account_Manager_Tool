@@ -103,7 +103,7 @@ export function HubSpotDashboardEnhanced() {
       const response = await fetch("/api/hubspot/deals?limit=50");
       if (!response.ok) {
         // If API fails, try to get uploaded deals
-        console.log("HubSpot API failed, checking for uploaded deals...");
+        console.warn("HubSpot API failed, checking for uploaded deals...");
         const uploadResponse = await fetch("/api/hubspot/upload");
         if (uploadResponse.ok) {
           const uploadData = await uploadResponse.json();
