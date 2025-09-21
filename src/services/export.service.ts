@@ -201,7 +201,20 @@ Total Cost: £${invoiceExport.exclusionsSummary.totalCost.toFixed(2)}
         p.budget_hours,
         COALESCE(SUM(te.hours), 0) as actual_hours,
         COALESCE(SUM(te.cost_amount), 0) as actual_cost,
-        EXTRACT(DAY FROM CURRENT_DATE) / EXTRACT(DAY FROM DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day') as month_progress
+        CASE
+          WHEN DATE_TRUNC('month', $2::date) < DATE_TRUNC('month', CURRENT_DATE) THEN 1::numeric
+          WHEN DATE_TRUNC('month', $2::date) > DATE_TRUNC('month', CURRENT_DATE) THEN 0::numeric
+          ELSE
+            EXTRACT(
+              DAY FROM LEAST(
+                CURRENT_DATE,
+                DATE_TRUNC('month', $2::date) + INTERVAL '1 month' - INTERVAL '1 day'
+              )
+            ) /
+            EXTRACT(
+              DAY FROM DATE_TRUNC('month', $2::date) + INTERVAL '1 month' - INTERVAL '1 day'
+            )
+        END as month_progress
       FROM projects p
       LEFT JOIN time_entries te ON te.project_id = p.id
         AND DATE_TRUNC('month', te.date) = DATE_TRUNC('month', $2::date)
