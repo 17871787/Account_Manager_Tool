@@ -1,7 +1,11 @@
 import axios from 'axios';
 import { HarvestConnector } from '../harvest.connector';
+import { query } from '../../models/database';
 
 jest.mock('axios');
+jest.mock('../../models/database', () => ({
+  query: jest.fn(),
+}));
 
 describe('HarvestConnector', () => {
   const originalEnv = process.env;
@@ -12,11 +16,13 @@ describe('HarvestConnector', () => {
       HARVEST_ACCESS_TOKEN: 'token',
       HARVEST_ACCOUNT_ID: 'account',
     };
+    (query as jest.MockedFunction<typeof query>).mockReset();
+    (query as jest.MockedFunction<typeof query>).mockResolvedValue({ rows: [] } as never);
   });
 
   afterEach(() => {
     process.env = originalEnv;
-    jest.resetAllMocks();
+    jest.clearAllMocks();
   });
 
   it('testConnection returns true on success', async () => {
@@ -82,6 +88,8 @@ describe('HarvestConnector', () => {
     const connector = new HarvestConnector();
     const from = new Date('2023-01-01');
     const to = new Date('2023-01-31');
+
+    (query as jest.MockedFunction<typeof query>).mockResolvedValue({ rows: [] } as never);
 
     const entries = await connector.getTimeEntries(from, to);
 

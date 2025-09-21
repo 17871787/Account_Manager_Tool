@@ -23,6 +23,10 @@ export interface HarvestTimeEntry {
   costAmount: number;
   currency: string;
   externalRef?: string;
+  clientId: string | null;
+  projectId: string | null;
+  taskId: string | null;
+  personId: string | null;
 }
 
 export interface SFTRevenue {
@@ -222,14 +226,18 @@ export interface TimeEntryRecord {
 export interface HarvestTimeEntryApiResponse {
   id: number;
   spent_date: string;
-  client?: { name: string };
-  project?: { name: string };
-  task?: { name: string };
+  client?: { id?: number; name: string };
+  client_id?: number;
+  project?: { id?: number; name: string };
+  project_id?: number;
+  task?: { id?: number; name: string };
+  task_id?: number;
   notes?: string;
   hours: number;
   billable: boolean;
   is_locked: boolean;
-  user?: { first_name: string; last_name: string };
+  user?: { id?: number; first_name: string; last_name: string };
+  user_id?: number;
   user_assignment?: { role: string };
   billable_rate?: number;
   cost_rate?: number;

@@ -57,7 +57,19 @@ describe('API endpoints', () => {
 
     harvestConnector = {
       getTimeEntries: jest.fn().mockResolvedValue([
-        { entryId: '1', date: new Date(), hours: 1, billableFlag: true, notes: 'test' }
+        {
+          entryId: '1',
+          date: new Date(),
+          hours: 1,
+          billableFlag: true,
+          notes: 'test',
+          clientId: null,
+          projectId: null,
+          taskId: null,
+          personId: null,
+          billableAmount: 0,
+          costAmount: 0,
+        }
       ])
     } as any;
     hubspotConnector = {
@@ -108,6 +120,12 @@ describe('API endpoints', () => {
       hours: 1,
       billableFlag: true,
       notes: 'test',
+      clientId: null,
+      projectId: null,
+      taskId: null,
+      personId: null,
+      billableAmount: 0,
+      costAmount: 0,
     }));
 
     harvestConnector.getTimeEntries.mockResolvedValue(entries);
@@ -135,7 +153,7 @@ describe('API endpoints', () => {
     insertCalls.forEach((call, index) => {
       const params = call[1] as unknown[];
       const expectedLength =
-        index < fullChunks ? DEFAULT_BATCH_SIZE * 5 : remainder * 5;
+        index < fullChunks ? DEFAULT_BATCH_SIZE * 11 : remainder * 11;
       expect(params).toHaveLength(expectedLength);
     });
 

@@ -123,4 +123,63 @@ describe('ProfitabilityService', () => {
       );
     });
   });
+
+  describe('calculateProfitability', () => {
+    it('aggregates cost amounts and stores metrics', async () => {
+      const queryMock = query as jest.MockedFunction<typeof query>;
+      queryMock
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              billable_cost: '120.50',
+              exclusion_cost: '30.25',
+              exception_count: '2',
+            },
+          ],
+        } as never)
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              recognised_revenue: '500.75',
+            },
+          ],
+        } as never)
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              client_name: 'Client X',
+              project_name: 'Project Y',
+            },
+          ],
+        } as never)
+        .mockResolvedValueOnce({ rows: [] } as never);
+
+      const month = new Date('2024-02-01T00:00:00Z');
+      const expectedMarginPercentage = (350 / 500.75) * 100;
+      const metric = await service.calculateProfitability('client-uuid', 'project-uuid', month);
+
+      expect(metric).toEqual({
+        month: '2024-02',
+        client: 'Client X',
+        project: 'Project Y',
+        billableCost: 120.5,
+        exclusionCost: 30.25,
+        recognisedRevenue: 500.75,
+        margin: 350.0,
+        marginPercentage: expectedMarginPercentage,
+        exceptionsCount: 2,
+      });
+
+      expect(queryMock).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('SUM(CASE WHEN t.category = \'billable\' THEN te.cost_amount'),
+        ['client-uuid', 'project-uuid', month]
+      );
+      expect(queryMock).toHaveBeenNthCalledWith(
+        4,
+        expect.stringContaining('INSERT INTO profitability_metrics'),
+        expect.any(Array)
+      );
+    });
+  });
 });
