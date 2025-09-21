@@ -3,7 +3,7 @@ import { ProfitabilityService } from '../services/profitability.service';
 import { query } from '../models/database';
 import { captureException } from '../utils/sentry';
 
-import createSyncRouter, { SyncRouterDeps } from './sync/routes';
+import createSyncRouter, { SyncRouterDeps } from './sync/routes.optimized';
 import exceptionsRouter from './exceptions/routes';
 import exportRouter from './export/routes';
 

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import {
   HarvestTimeEntry,
   HarvestTimeEntryApiResponse,
@@ -70,9 +70,10 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/time_entries', {
-          params: { ...params, page },
-        });
+        const response: AxiosResponse<{ time_entries: HarvestTimeEntryApiResponse[]; next_page: number | null }> =
+          await this.client.get('/time_entries', {
+            params: { ...params, page },
+          });
 
         const entries = await Promise.all(
           response.data.time_entries.map((entry: HarvestTimeEntryApiResponse) =>
@@ -103,9 +104,12 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/projects', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response: AxiosResponse<{ projects: any[]; next_page: number | null }> = await this.client.get(
+          '/projects',
+          {
+            params: { is_active: isActive, per_page: 100, page },
+          }
+        );
 
         projects.push(
           ...response.data.projects.map((p: any) => ({
@@ -136,9 +140,12 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/clients', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response: AxiosResponse<{ clients: any[]; next_page: number | null }> = await this.client.get(
+          '/clients',
+          {
+            params: { is_active: isActive, per_page: 100, page },
+          }
+        );
 
         clients.push(
           ...response.data.clients.map((c: any) => ({
@@ -167,9 +174,12 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/tasks', {
-          params: { per_page: 100, page },
-        });
+        const response: AxiosResponse<{ tasks: any[]; next_page: number | null }> = await this.client.get(
+          '/tasks',
+          {
+            params: { per_page: 100, page },
+          }
+        );
 
         tasks.push(
           ...response.data.tasks.map((t: any) => ({
@@ -199,9 +209,12 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/users', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response: AxiosResponse<{ users: any[]; next_page: number | null }> = await this.client.get(
+          '/users',
+          {
+            params: { is_active: isActive, per_page: 100, page },
+          }
+        );
 
         users.push(
           ...response.data.users.map((u: any) => ({
@@ -232,7 +245,7 @@ export class HarvestConnector {
     budgetIsMonthly: boolean;
   }> {
     try {
-      const response = await this.client.get(`/projects/${projectId}`);
+      const response: AxiosResponse<{ project: any }> = await this.client.get(`/projects/${projectId}`);
       return {
         budget: response.data.project.budget,
         budgetBy: response.data.project.budget_by,

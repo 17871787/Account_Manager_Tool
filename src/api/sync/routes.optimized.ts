@@ -102,6 +102,7 @@ export default function createSyncRouter({
         clientId
       );
       const fetchTime = Date.now() - startTime;
+      const metrics = connector.getLastSyncMetrics();
 
       const client = await getClient();
       try {
@@ -154,6 +155,12 @@ export default function createSyncRouter({
         }
 
         await client.query('COMMIT');
+        const cacheHitRate = metrics
+          ? metrics.cacheHits + metrics.cacheMisses > 0
+            ? metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses)
+            : 1
+          : null;
+
         res.json({
           success: true,
           entriesProcessed: entries.length,
@@ -161,7 +168,10 @@ export default function createSyncRouter({
           source: 'harvest',
           performance: {
             fetchTimeMs: fetchTime,
-            entriesPerSecond: entries.length > 0 ? Math.round(entries.length / (fetchTime / 1000)) : 0
+            entriesPerSecond: entries.length > 0 ? Math.round(entries.length / (fetchTime / 1000)) : 0,
+            harvestApiRequests: metrics?.harvestRequests ?? null,
+            dbQueryCount: metrics?.dbQueryCount ?? null,
+            cacheHitRate,
           }
         });
       } catch (err) {
