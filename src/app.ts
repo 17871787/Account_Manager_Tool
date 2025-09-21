@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import createApiRouter from './api/routes';
 import { AppError } from './types';
+import { createRateLimitMiddleware, requireExpressAuth } from './middleware/expressAuth';
 
 const app = express();
 
@@ -11,7 +12,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // API routes
-app.use('/api', createApiRouter());
+const apiLimiter = createRateLimitMiddleware({ scope: 'api' });
+app.use('/api', apiLimiter, requireExpressAuth, createApiRouter());
 
 // Error handling middleware
 app.use((err: AppError, req: Request, res: Response, _next: NextFunction) => {

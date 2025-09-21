@@ -2,9 +2,16 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { ExceptionEngine } from '../../rules/exception.engine';
 import { captureException } from '../../utils/sentry';
+import { createRateLimitMiddleware } from '../../middleware/expressAuth';
 
 const router = Router();
 const exceptionEngine = new ExceptionEngine();
+
+const reviewLimiter = createRateLimitMiddleware({
+  scope: 'exceptions-review',
+  limit: 10,
+  windowMs: 10 * 60 * 1000,
+});
 
 router.get('/exceptions/pending', async (req: Request, res: Response) => {
   let clientId: string | undefined;
@@ -24,7 +31,7 @@ router.get('/exceptions/pending', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/exceptions/:id/review', async (req: Request, res: Response) => {
+router.post('/exceptions/:id/review', reviewLimiter, async (req: Request, res: Response) => {
   let params: { id: string } | undefined;
   let body: { action: 'approve' | 'reject'; userId: string; helpdeskTicketId?: string } | undefined;
   try {

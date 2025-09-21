@@ -6,6 +6,7 @@ import { HubSpotConnector } from '../../connectors/hubspot.connector';
 import { getClient } from '../../models/database';
 import { captureException } from '../../utils/sentry';
 import { batchInsert } from './batchInsert';
+import { createRateLimitMiddleware } from '../../middleware/expressAuth';
 
 export interface SyncRouterDeps {
   harvestConnector?: HarvestConnector;
@@ -20,7 +21,23 @@ export default function createSyncRouter({
 }: SyncRouterDeps = {}) {
   const router = Router();
 
-  router.post('/sync/harvest', async (req: Request, res: Response) => {
+  const harvestLimiter = createRateLimitMiddleware({
+    scope: 'sync-harvest',
+    limit: 3,
+    windowMs: 5 * 60 * 1000,
+  });
+  const hubspotLimiter = createRateLimitMiddleware({
+    scope: 'sync-hubspot',
+    limit: 3,
+    windowMs: 5 * 60 * 1000,
+  });
+  const sftLimiter = createRateLimitMiddleware({
+    scope: 'sync-sft',
+    limit: 3,
+    windowMs: 5 * 60 * 1000,
+  });
+
+  router.post('/sync/harvest', harvestLimiter, async (req: Request, res: Response) => {
     let connector: HarvestConnector;
     let fromDate: string | undefined;
     let toDate: string | undefined;
@@ -113,7 +130,7 @@ export default function createSyncRouter({
     }
   });
 
-router.post('/sync/hubspot', async (req: Request, res: Response) => {
+  router.post('/sync/hubspot', hubspotLimiter, async (req: Request, res: Response) => {
   let connector: HubSpotConnector;
   try {
     if (hubspotConnector) {
@@ -148,7 +165,7 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
   }
 });
 
-  router.post('/sync/sft', async (req: Request, res: Response) => {
+  router.post('/sync/sft', sftLimiter, async (req: Request, res: Response) => {
     let connector: SFTConnector;
     let monthStr: string | undefined;
     try {

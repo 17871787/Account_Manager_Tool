@@ -4,9 +4,34 @@ import createApiRouter from '../routes';
 import { DEFAULT_BATCH_SIZE } from '../sync/batchInsert';
 import { setPool } from '../../models/database';
 import { Pool, PoolClient } from 'pg';
+import { createRateLimitMiddleware, requireExpressAuth } from '../../middleware/expressAuth';
+import { resetRateLimit } from '../../middleware/auth';
+import { SyncRouterDeps } from '../sync/routes';
 
 let mockClient: jest.Mocked<PoolClient>;
 let mockPool: jest.Mocked<Pool>;
+
+const API_KEY = 'test-api-key';
+const SESSION_TOKEN = 'valid-session-token';
+
+interface BuildAppOptions {
+  deps?: SyncRouterDeps;
+  limit?: number;
+  windowMs?: number;
+  scope?: string;
+}
+
+function buildApp({ deps, limit = 1000, windowMs = 60_000, scope = 'api-test' }: BuildAppOptions = {}) {
+  const application = express();
+  application.use(express.json());
+  application.use(
+    '/api',
+    createRateLimitMiddleware({ scope, limit, windowMs }),
+    requireExpressAuth,
+    createApiRouter(deps)
+  );
+  return application;
+}
 
 describe('API endpoints', () => {
   let connectSpy: jest.SpyInstance;
@@ -17,6 +42,9 @@ describe('API endpoints', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    resetRateLimit();
+    process.env.INTERNAL_API_KEY = API_KEY;
+    process.env.VALID_SESSION_TOKEN = SESSION_TOKEN;
     mockClient = {
       query: jest.fn().mockResolvedValue({ rows: [] }),
       release: jest.fn(),
@@ -41,20 +69,20 @@ describe('API endpoints', () => {
       ])
     } as any;
 
-    app = express();
-    app.use(express.json());
-    app.use(
-      '/api',
-      createApiRouter({ harvestConnector, hubspotConnector, sftConnector })
-    );
+    app = buildApp({
+      deps: { harvestConnector, hubspotConnector, sftConnector },
+      scope: 'api-primary',
+    });
   });
 
   afterEach(() => {
     connectSpy.mockRestore();
+    delete process.env.INTERNAL_API_KEY;
+    delete process.env.VALID_SESSION_TOKEN;
   });
 
   it('responds to health check', async () => {
-    const res = await request(app).get('/api/health');
+    const res = await request(app).get('/api/health').set('x-api-key', API_KEY);
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
   });
@@ -62,6 +90,7 @@ describe('API endpoints', () => {
   it('syncs Harvest data', async () => {
     const res = await request(app)
       .post('/api/sync/harvest')
+      .set('x-api-key', API_KEY)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -85,6 +114,7 @@ describe('API endpoints', () => {
 
     const res = await request(app)
       .post('/api/sync/harvest')
+      .set('x-api-key', API_KEY)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -112,7 +142,7 @@ describe('API endpoints', () => {
   });
 
   it('syncs HubSpot data', async () => {
-    const res = await request(app).post('/api/sync/hubspot');
+    const res = await request(app).post('/api/sync/hubspot').set('x-api-key', API_KEY);
     expect(res.status).toBe(200);
     expect(res.body.source).toBe('hubspot');
     expect(res.body.recordsProcessed).toBe(2);
@@ -121,6 +151,7 @@ describe('API endpoints', () => {
   it('syncs SFT data', async () => {
     const res = await request(app)
       .post('/api/sync/sft')
+      .set('x-api-key', API_KEY)
       .send({ month: '2024-01' });
     expect(res.status).toBe(200);
     expect(res.body.source).toBe('sft');
@@ -132,6 +163,7 @@ describe('API endpoints', () => {
 
     const res = await request(app)
       .post('/api/sync/harvest')
+      .set('x-api-key', API_KEY)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -148,12 +180,11 @@ describe('API endpoints', () => {
     delete process.env.HARVEST_ACCESS_TOKEN;
     delete process.env.HARVEST_ACCOUNT_ID;
 
-    const appLocal = express();
-    appLocal.use(express.json());
-    appLocal.use('/api', createApiRouter());
+    const appLocal = buildApp({ scope: 'harvest-env' });
 
     const res = await request(appLocal)
       .post('/api/sync/harvest')
+      .set('x-api-key', API_KEY)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -177,11 +208,9 @@ describe('API endpoints', () => {
     const { HUBSPOT_API_KEY } = process.env;
     delete process.env.HUBSPOT_API_KEY;
 
-    const appLocal = express();
-    appLocal.use(express.json());
-    appLocal.use('/api', createApiRouter());
+    const appLocal = buildApp({ scope: 'hubspot-env' });
 
-    const res = await request(appLocal).post('/api/sync/hubspot');
+    const res = await request(appLocal).post('/api/sync/hubspot').set('x-api-key', API_KEY);
     expect(res.status).toBe(500);
     expect(res.body.error).toMatch(/HUBSPOT_API_KEY/);
 
@@ -198,12 +227,11 @@ describe('API endpoints', () => {
     delete process.env.MS_CLIENT_ID;
     delete process.env.MS_CLIENT_SECRET;
 
-    const appLocal = express();
-    appLocal.use(express.json());
-    appLocal.use('/api', createApiRouter());
+    const appLocal = buildApp({ scope: 'sft-env' });
 
     const res = await request(appLocal)
       .post('/api/sync/sft')
+      .set('x-api-key', API_KEY)
       .send({ month: '2024-01' });
     expect(res.status).toBe(500);
     expect(res.body.error).toMatch(/MS_TENANT_ID|MS_CLIENT_ID|MS_CLIENT_SECRET/);
@@ -223,5 +251,34 @@ describe('API endpoints', () => {
     } else {
       delete process.env.MS_CLIENT_SECRET;
     }
+  });
+
+  it('returns 401 when authentication is missing', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('Unauthorized');
+  });
+
+  it('allows session token authentication', async () => {
+    const res = await request(app)
+      .get('/api/health')
+      .set('Cookie', `session-token=${SESSION_TOKEN}`);
+    expect(res.status).toBe(200);
+  });
+
+  it('returns 429 when API rate limit is exceeded', async () => {
+    const limitedApp = buildApp({
+      deps: { harvestConnector, hubspotConnector, sftConnector },
+      scope: 'api-rate-limit',
+      limit: 1,
+      windowMs: 60_000,
+    });
+
+    const first = await request(limitedApp).get('/api/health').set('x-api-key', API_KEY);
+    expect(first.status).toBe(200);
+
+    const second = await request(limitedApp).get('/api/health').set('x-api-key', API_KEY);
+    expect(second.status).toBe(429);
+    expect(second.body.error).toBe('Too Many Requests');
   });
 });
