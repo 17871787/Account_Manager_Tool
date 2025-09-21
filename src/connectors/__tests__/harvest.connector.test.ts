@@ -298,6 +298,94 @@ describe('HarvestConnector', () => {
     });
   });
 
+  it('only queries once per unique Harvest ID when multiple entries share it', async () => {
+    const getMock = jest.fn().mockResolvedValue({
+      data: {
+        time_entries: [
+          {
+            id: 1,
+            spent_date: '2023-01-01',
+            client: { id: 10, name: 'Client Shared' },
+            project: { id: 20, name: 'Project Shared' },
+            task: { id: 30, name: 'Task Shared' },
+            user: { id: 40, first_name: 'John', last_name: 'Doe' },
+            user_assignment: { role: 'Engineer' },
+            notes: 'Shared entry one',
+            hours: 4,
+            billable: true,
+            is_locked: false,
+            billable_rate: 100,
+            cost_rate: 50,
+            external_reference: { id: 'ext-shared-1' },
+          },
+          {
+            id: 2,
+            spent_date: '2023-01-02',
+            client: { id: 10, name: 'Client Shared' },
+            project: { id: 20, name: 'Project Shared' },
+            task: { id: 30, name: 'Task Shared' },
+            user: { id: 40, first_name: 'Jane', last_name: 'Smith' },
+            user_assignment: { role: 'Engineer' },
+            notes: 'Shared entry two',
+            hours: 3,
+            billable: false,
+            is_locked: false,
+            billable_rate: 120,
+            cost_rate: 60,
+            external_reference: { id: 'ext-shared-2' },
+          },
+        ],
+        next_page: null,
+      },
+    });
+    (axios.create as jest.Mock).mockReturnValue({ get: getMock });
+
+    const connector = new HarvestConnector();
+    const tables: string[] = [];
+
+    (query as jest.MockedFunction<typeof query>).mockImplementation(
+      async (sql: string) => {
+        const match = /FROM (\w+)/.exec(sql);
+        const table = match?.[1] ?? 'unknown';
+        tables.push(table);
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        const idMap: Record<string, string> = {
+          clients: 'client-local',
+          projects: 'project-local',
+          tasks: 'task-local',
+          people: 'person-local',
+        };
+
+        const localId = idMap[table] ?? null;
+        return { rows: localId ? [{ id: localId }] : [] } as never;
+      }
+    );
+
+    const from = new Date('2023-01-01');
+    const to = new Date('2023-01-31');
+
+    const entries = await connector.getTimeEntries(from, to);
+
+    expect(query).toHaveBeenCalledTimes(4);
+    expect(tables).toEqual(['clients', 'projects', 'tasks', 'people']);
+    expect(entries).toHaveLength(2);
+    expect(entries.map((entry) => entry.clientId)).toEqual([
+      'client-local',
+      'client-local',
+    ]);
+    expect(entries.map((entry) => entry.projectId)).toEqual([
+      'project-local',
+      'project-local',
+    ]);
+    expect(entries.map((entry) => entry.taskId)).toEqual(['task-local', 'task-local']);
+    expect(entries.map((entry) => entry.personId)).toEqual([
+      'person-local',
+      'person-local',
+    ]);
+  });
+
   it('throws an error when HARVEST_ACCESS_TOKEN is missing', () => {
     delete process.env.HARVEST_ACCESS_TOKEN;
     expect(() => new HarvestConnector()).toThrow('HARVEST_ACCESS_TOKEN is not set');

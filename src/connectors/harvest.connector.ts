@@ -12,6 +12,7 @@ import { captureException } from '../utils/sentry';
 import { query } from '../models/database';
 
 type HarvestIdCache = Map<string, string | null>;
+type HarvestPendingCache = Map<string, Promise<string | null>>;
 
 export class HarvestConnector {
   private client: AxiosInstance;
@@ -20,6 +21,10 @@ export class HarvestConnector {
   private projectIdCache: HarvestIdCache = new Map();
   private taskIdCache: HarvestIdCache = new Map();
   private personIdCache: HarvestIdCache = new Map();
+  private clientIdPending: HarvestPendingCache = new Map();
+  private projectIdPending: HarvestPendingCache = new Map();
+  private taskIdPending: HarvestPendingCache = new Map();
+  private personIdPending: HarvestPendingCache = new Map();
 
   constructor() {
     const accessToken = process.env.HARVEST_ACCESS_TOKEN;
@@ -255,24 +260,28 @@ export class HarvestConnector {
         'clients',
         entry.client?.id ?? entry.client_id,
         this.clientIdCache,
+        this.clientIdPending,
         'client'
       ),
       this.resolveLocalId(
         'projects',
         entry.project?.id ?? entry.project_id,
         this.projectIdCache,
+        this.projectIdPending,
         'project'
       ),
       this.resolveLocalId(
         'tasks',
         entry.task?.id ?? entry.task_id,
         this.taskIdCache,
+        this.taskIdPending,
         'task'
       ),
       this.resolveLocalId(
         'people',
         entry.user?.id ?? entry.user_id,
         this.personIdCache,
+        this.personIdPending,
         'person'
       ),
     ]);
@@ -307,6 +316,7 @@ export class HarvestConnector {
     table: 'clients' | 'projects' | 'tasks' | 'people',
     harvestId: number | undefined,
     cache: HarvestIdCache,
+    pendingCache: HarvestPendingCache,
     entity: string
   ): Promise<string | null> {
     if (!harvestId) {
@@ -318,24 +328,37 @@ export class HarvestConnector {
       return cache.get(key) ?? null;
     }
 
-    try {
-      const result = await query<{ id: string }>(
-        `SELECT id FROM ${table} WHERE harvest_id = $1`,
-        [key]
-      );
-      const localId = result.rows[0]?.id ?? null;
-      cache.set(key, localId);
-      return localId;
-    } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.resolveLocalId',
-        table,
-        harvestId: key,
-        entity,
-      });
-      cache.set(key, null);
-      return null;
+    const pendingLookup = pendingCache.get(key);
+    if (pendingLookup) {
+      return pendingLookup;
     }
+
+    const lookupPromise = (async () => {
+      try {
+        const result = await query<{ id: string }>(
+          `SELECT id FROM ${table} WHERE harvest_id = $1`,
+          [key]
+        );
+        const localId = result.rows[0]?.id ?? null;
+        cache.set(key, localId);
+        return localId;
+      } catch (error) {
+        captureException(error, {
+          operation: 'HarvestConnector.resolveLocalId',
+          table,
+          harvestId: key,
+          entity,
+        });
+        cache.set(key, null);
+        return null;
+      } finally {
+        pendingCache.delete(key);
+      }
+    })();
+
+    pendingCache.set(key, lookupPromise);
+
+    return lookupPromise;
   }
 
   async testConnection(): Promise<boolean> {
