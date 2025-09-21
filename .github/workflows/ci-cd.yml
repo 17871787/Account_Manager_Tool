@@ -52,6 +52,9 @@ jobs:
           npm run migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
       - name: Run ESLint
         run: npm run lint
@@ -63,6 +66,9 @@ jobs:
         run: npm test -- --coverage --passWithNoTests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           NODE_ENV: test
 
       - name: Upload coverage report
@@ -83,6 +89,9 @@ jobs:
         run: npm run build:api # compiles Express API to dist for deployment
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
       - name: Upload API build artifact
         uses: actions/upload-artifact@v4
@@ -94,6 +103,9 @@ jobs:
         run: npm run build
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
   lighthouse:
     runs-on: ubuntu-latest
@@ -122,6 +134,10 @@ jobs:
 
       - name: Build application for Lighthouse
         run: npm run build
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
       - name: Run Lighthouse CI
         continue-on-error: true
