@@ -91,6 +91,13 @@ List active projects for a client.
 ### `POST /api/sync/harvest`
 Sync time entries from Harvest.
 
+#### Rate limiting
+
+Sync routes share a rate limiter that allows 60 requests per minute by default. The
+thresholds can be overridden with the `SYNC_RATE_LIMIT` (number of requests) and
+`SYNC_RATE_WINDOW_MS` (window size in milliseconds) environment variables if your
+deployment needs a different throughput.
+
 **Request Schema**
 ```json
 {
