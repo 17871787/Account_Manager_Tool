@@ -101,7 +101,7 @@ AM Copilot provides real-time profitability insights and automated exception man
 
 ### Prerequisites
 - Node.js 18+
-- PostgreSQL database
+- PostgreSQL database with the `pgcrypto` extension enabled (used for UUID defaults)
 - Harvest account with API access
 - HubSpot account (optional)
 

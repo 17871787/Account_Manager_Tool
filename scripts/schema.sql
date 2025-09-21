@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- MoA Account Manager AI Database Schema
 
 -- Clients dimension
