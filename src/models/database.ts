@@ -1,4 +1,5 @@
 import { Pool, QueryResult, QueryResultRow } from 'pg';
+import type { ConnectionOptions } from 'tls';
 import dotenv from 'dotenv';
 import { logger } from '../utils/logger';
 
@@ -8,9 +9,52 @@ let pool: Pool | undefined;
 
 export function getPool(connectionString?: string): Pool {
   if (!pool) {
+    const sslConfig = (() => {
+      const mode = (process.env.DATABASE_SSL_MODE || 'verify-full').toLowerCase();
+
+      if (mode === 'disable') {
+        logger.warn(
+          'DATABASE_SSL_MODE=disable – establishing connection without TLS. Use only in trusted environments.'
+        );
+        return false;
+      }
+
+      if (mode === 'allow-invalid') {
+        logger.warn(
+          'DATABASE_SSL_MODE=allow-invalid – certificate verification disabled. Use only in trusted development environments.'
+        );
+        return { rejectUnauthorized: false };
+      }
+
+      if (mode !== 'verify-full') {
+        logger.warn(
+          `Unknown DATABASE_SSL_MODE "${process.env.DATABASE_SSL_MODE}". Defaulting to verify-full.`
+        );
+      }
+
+      const sslOptions: ConnectionOptions = { rejectUnauthorized: true };
+      const ca = process.env.DATABASE_SSL_CA;
+      const cert = process.env.DATABASE_SSL_CERT;
+      const key = process.env.DATABASE_SSL_KEY;
+
+      if (ca) {
+        sslOptions.ca = ca.replace(/\\n/g, '\n');
+      }
+
+      if (cert) {
+        sslOptions.cert = cert.replace(/\\n/g, '\n');
+      }
+
+      if (key) {
+        sslOptions.key = key.replace(/\\n/g, '\n');
+      }
+
+      return sslOptions;
+    })();
+
     pool = new Pool({
       connectionString: connectionString || process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: sslConfig,
     });
   }
   return pool;
