@@ -8,6 +8,21 @@ import { captureException } from '../../utils/sentry';
 import { batchInsert } from './batchInsert';
 import { createRateLimitMiddleware } from '../../middleware/expressAuth';
 
+function readIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) {
+    return fallback;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
+const SYNC_RATE_LIMIT = readIntEnv('SYNC_RATE_LIMIT', 60);
+const SYNC_RATE_WINDOW_MS = readIntEnv('SYNC_RATE_WINDOW_MS', 60_000);
+
 export interface SyncRouterDeps {
   harvestConnector?: HarvestConnector;
   sftConnector?: SFTConnector;
@@ -23,18 +38,18 @@ export default function createSyncRouter({
 
   const harvestLimiter = createRateLimitMiddleware({
     scope: 'sync-harvest',
-    limit: 3,
-    windowMs: 5 * 60 * 1000,
+    limit: SYNC_RATE_LIMIT,
+    windowMs: SYNC_RATE_WINDOW_MS,
   });
   const hubspotLimiter = createRateLimitMiddleware({
     scope: 'sync-hubspot',
-    limit: 3,
-    windowMs: 5 * 60 * 1000,
+    limit: SYNC_RATE_LIMIT,
+    windowMs: SYNC_RATE_WINDOW_MS,
   });
   const sftLimiter = createRateLimitMiddleware({
     scope: 'sync-sft',
-    limit: 3,
-    windowMs: 5 * 60 * 1000,
+    limit: SYNC_RATE_LIMIT,
+    windowMs: SYNC_RATE_WINDOW_MS,
   });
 
   router.post('/sync/harvest', harvestLimiter, async (req: Request, res: Response) => {
