@@ -13,9 +13,11 @@ try {
   });
 } catch {
   logger = {
+    // eslint-disable-next-line no-console
     info: console.log,
     error: console.error,
     warn: console.warn,
+    // eslint-disable-next-line no-console
     debug: console.debug,
   };
 }

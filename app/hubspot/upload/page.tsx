@@ -28,7 +28,7 @@ export default function HubSpotUploadPage() {
             <li>Log into your HubSpot account</li>
             <li>Navigate to Sales → Deals</li>
             <li>Select the deals you want to export (or select all)</li>
-            <li>Click the "Export" button in the top toolbar</li>
+            <li>Click the &quot;Export&quot; button in the top toolbar</li>
             <li>Choose Excel or CSV format</li>
             <li>Download the file and upload it here</li>
           </ol>
