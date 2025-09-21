@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS clients (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_clients_harvest_id
+    ON clients (harvest_id);
+
 -- Projects dimension
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -30,6 +33,9 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_projects_harvest_id
+    ON projects (harvest_id);
+
 -- Tasks dimension with taxonomy
 CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -41,6 +47,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tasks_harvest_id
+    ON tasks (harvest_id);
 
 -- People dimension
 CREATE TABLE IF NOT EXISTS people (
@@ -55,6 +64,9 @@ CREATE TABLE IF NOT EXISTS people (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_harvest_id
+    ON people (harvest_id);
 
 -- Rate policies
 CREATE TABLE IF NOT EXISTS rate_policies (

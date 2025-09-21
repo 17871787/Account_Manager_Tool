@@ -126,6 +126,11 @@ npm run migrate
 npm run dev
 ```
 
+> Running the migration suite also applies concurrent indexes on each Harvest
+> ID column (`clients.harvest_id`, `projects.harvest_id`, `tasks.harvest_id`,
+> `people.harvest_id`) so existing databases benefit from faster lookups
+> without blocking writes.
+
 ### Environment Variables
 
 ```env
