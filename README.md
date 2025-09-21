@@ -131,6 +131,11 @@ npm run dev
 ```env
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/am_copilot
+# Optional: override default TLS verification behaviour
+# DATABASE_SSL_MODE=verify-full
+# DATABASE_SSL_CA="-----BEGIN CERTIFICATE-----\\n..."
+# DATABASE_SSL_CERT="-----BEGIN CERTIFICATE-----\\n..."
+# DATABASE_SSL_KEY="-----BEGIN PRIVATE KEY-----\\n..."
 
 # API Keys
 HARVEST_ACCESS_TOKEN=your_harvest_token
@@ -141,6 +146,20 @@ HUBSPOT_API_KEY=your_hubspot_key
 SENTRY_DSN=your_sentry_dsn
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
+
+### Database SSL configuration
+
+Database connections now default to full certificate verification. This matches
+the requirements for hosted platforms like Vercel + Neon/Postgres and removes
+the need to disable security in production environments.
+
+- `DATABASE_SSL_MODE` (default `verify-full`): set to `allow-invalid` to keep the
+  TLS tunnel but skip certificate verification, or `disable` to turn TLS off
+  entirely. **Only use these overrides for trusted local development setups.**
+- `DATABASE_SSL_CA`, `DATABASE_SSL_CERT`, `DATABASE_SSL_KEY`: provide PEM-encoded
+  certificate material (newline characters can be encoded as `\n`). These values
+  are applied when using `verify-full` to support managed Postgres providers that
+  require custom certificates.
 
 ## Development
 

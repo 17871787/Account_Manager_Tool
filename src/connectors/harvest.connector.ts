@@ -54,20 +54,18 @@ export class HarvestConnector {
       if (clientId) params.client_id = clientId;
       if (projectId) params.project_id = projectId;
 
-      let allEntries: HarvestTimeEntry[] = [];
-      let page = 1;
-      let hasMore = true;
+      const allEntries: HarvestTimeEntry[] = [];
+      let page: number | null = 1;
 
-      while (hasMore) {
+      while (page !== null) {
         const response = await this.client.get('/time_entries', {
           params: { ...params, page },
         });
 
         const entries = response.data.time_entries.map(this.mapTimeEntry);
-        allEntries = [...allEntries, ...entries];
+        allEntries.push(...entries);
 
-        hasMore = response.data.next_page !== null;
-        page++;
+        page = response.data.next_page;
       }
 
       return allEntries;
@@ -85,16 +83,28 @@ export class HarvestConnector {
 
   async getProjects(isActive = true): Promise<HarvestProject[]> {
     try {
-      const response = await this.client.get('/projects', {
-        params: { is_active: isActive, per_page: 100 },
-      });
-      return response.data.projects.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        code: p.code,
-        clientId: p.client?.id ?? p.client_id,
-        isActive: p.is_active,
-      }));
+      const projects: HarvestProject[] = [];
+      let page: number | null = 1;
+
+      while (page !== null) {
+        const response = await this.client.get('/projects', {
+          params: { is_active: isActive, per_page: 100, page },
+        });
+
+        projects.push(
+          ...response.data.projects.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            code: p.code,
+            clientId: p.client?.id ?? p.client_id,
+            isActive: p.is_active,
+          }))
+        );
+
+        page = response.data.next_page;
+      }
+
+      return projects;
     } catch (error) {
       captureException(error, {
         operation: 'HarvestConnector.getProjects',
@@ -106,14 +116,26 @@ export class HarvestConnector {
 
   async getClients(isActive = true): Promise<HarvestClient[]> {
     try {
-      const response = await this.client.get('/clients', {
-        params: { is_active: isActive, per_page: 100 },
-      });
-      return response.data.clients.map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        isActive: c.is_active,
-      }));
+      const clients: HarvestClient[] = [];
+      let page: number | null = 1;
+
+      while (page !== null) {
+        const response = await this.client.get('/clients', {
+          params: { is_active: isActive, per_page: 100, page },
+        });
+
+        clients.push(
+          ...response.data.clients.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            isActive: c.is_active,
+          }))
+        );
+
+        page = response.data.next_page;
+      }
+
+      return clients;
     } catch (error) {
       captureException(error, {
         operation: 'HarvestConnector.getClients',
@@ -125,16 +147,28 @@ export class HarvestConnector {
 
   async getTasks(): Promise<HarvestTask[]> {
     try {
-      const response = await this.client.get('/tasks', {
-        params: { per_page: 100 },
-      });
-      return response.data.tasks.map((t: any) => ({
-        id: t.id,
-        name: t.name,
-        billableByDefault: t.billable_by_default,
-        defaultHourlyRate: t.default_hourly_rate,
-        isActive: t.is_active,
-      }));
+      const tasks: HarvestTask[] = [];
+      let page: number | null = 1;
+
+      while (page !== null) {
+        const response = await this.client.get('/tasks', {
+          params: { per_page: 100, page },
+        });
+
+        tasks.push(
+          ...response.data.tasks.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            billableByDefault: t.billable_by_default,
+            defaultHourlyRate: t.default_hourly_rate,
+            isActive: t.is_active,
+          }))
+        );
+
+        page = response.data.next_page;
+      }
+
+      return tasks;
     } catch (error) {
       captureException(error, {
         operation: 'HarvestConnector.getTasks',
@@ -145,16 +179,28 @@ export class HarvestConnector {
 
   async getUsers(isActive = true): Promise<HarvestUser[]> {
     try {
-      const response = await this.client.get('/users', {
-        params: { is_active: isActive, per_page: 100 },
-      });
-      return response.data.users.map((u: any) => ({
-        id: u.id,
-        firstName: u.first_name,
-        lastName: u.last_name,
-        email: u.email,
-        isActive: u.is_active,
-      }));
+      const users: HarvestUser[] = [];
+      let page: number | null = 1;
+
+      while (page !== null) {
+        const response = await this.client.get('/users', {
+          params: { is_active: isActive, per_page: 100, page },
+        });
+
+        users.push(
+          ...response.data.users.map((u: any) => ({
+            id: u.id,
+            firstName: u.first_name,
+            lastName: u.last_name,
+            email: u.email,
+            isActive: u.is_active,
+          }))
+        );
+
+        page = response.data.next_page;
+      }
+
+      return users;
     } catch (error) {
       captureException(error, {
         operation: 'HarvestConnector.getUsers',
