@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "../../middleware/auth";
+import { withAuth } from "../../../middleware/auth";
 
 export async function GET(req: NextRequest) {
   return withAuth(req, async () => {

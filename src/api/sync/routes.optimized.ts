@@ -42,8 +42,12 @@ async function getHarvestConnector(): Promise<OptimizedHarvestConnector> {
   return harvestConnectorInstance;
 }
 
+type HarvestConnectorLike = Pick<OptimizedHarvestConnector, 'getTimeEntries'> & {
+  getLastSyncMetrics?: () => ReturnType<OptimizedHarvestConnector['getLastSyncMetrics']> | null;
+};
+
 export interface SyncRouterDeps {
-  harvestConnector?: OptimizedHarvestConnector;
+  harvestConnector?: HarvestConnectorLike;
   sftConnector?: SFTConnector;
   hubspotConnector?: HubSpotConnector;
 }
@@ -72,7 +76,7 @@ export default function createSyncRouter({
   });
 
   router.post('/sync/harvest', harvestLimiter, async (req: Request, res: Response) => {
-    let connector: OptimizedHarvestConnector;
+    let connector: HarvestConnectorLike;
     let fromDate: string | undefined;
     let toDate: string | undefined;
     let clientId: string | undefined;
@@ -102,7 +106,8 @@ export default function createSyncRouter({
         clientId
       );
       const fetchTime = Date.now() - startTime;
-      const metrics = connector.getLastSyncMetrics();
+      const metrics =
+        typeof connector.getLastSyncMetrics === 'function' ? connector.getLastSyncMetrics() : null;
 
       const client = await getClient();
       try {
@@ -190,6 +195,10 @@ export default function createSyncRouter({
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      if (error instanceof Error && /Missing environment variables:/i.test(error.message)) {
+        return res.status(500).json({ error: error.message });
+      }
+
       captureException(error, {
         operation: 'syncHarvest',
         fromDate,
