@@ -1,4 +1,5 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import type { QueryResult, QueryResultRow } from 'pg';
 import {
   HarvestTimeEntry,
   HarvestTimeEntryApiResponse,
@@ -20,6 +21,14 @@ interface BatchIdLookupResult {
   people: IdMapping;
 }
 
+export interface HarvestSyncMetrics {
+  harvestRequests: number;
+  dbQueryCount: number;
+  cacheHits: number;
+  cacheMisses: number;
+  entriesProcessed: number;
+}
+
 export class OptimizedHarvestConnector {
   private client: AxiosInstance;
   private accountId: string;
@@ -36,6 +45,16 @@ export class OptimizedHarvestConnector {
     tasks: new Map(),
     people: new Map(),
   };
+
+  private currentMetrics: HarvestSyncMetrics = {
+    harvestRequests: 0,
+    dbQueryCount: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    entriesProcessed: 0,
+  };
+
+  private lastMetrics: HarvestSyncMetrics | null = null;
 
   constructor() {
     const accessToken = process.env.HARVEST_ACCESS_TOKEN;
@@ -71,6 +90,7 @@ export class OptimizedHarvestConnector {
     projectId?: string
   ): Promise<HarvestTimeEntry[]> {
     try {
+      this.resetMetrics();
       const params: Record<string, unknown> = {
         from: format(fromDate, 'yyyy-MM-dd'),
         to: format(toDate, 'yyyy-MM-dd'),
@@ -85,9 +105,11 @@ export class OptimizedHarvestConnector {
 
       // First, fetch all entries from Harvest API
       while (page !== null) {
-        const response = await this.client.get('/time_entries', {
-          params: { ...params, page },
-        });
+        const response: AxiosResponse<{ time_entries: HarvestTimeEntryApiResponse[]; next_page: number | null }> =
+          await this.client.get('/time_entries', {
+            params: { ...params, page },
+          });
+        this.currentMetrics.harvestRequests += 1;
 
         allApiEntries.push(...response.data.time_entries);
         page = response.data.next_page;
@@ -100,6 +122,9 @@ export class OptimizedHarvestConnector {
       const entries = allApiEntries.map(entry =>
         this.mapTimeEntryWithCache(entry, idLookups)
       );
+
+      this.currentMetrics.entriesProcessed = entries.length;
+      this.lastMetrics = { ...this.currentMetrics };
 
       return entries;
     } catch (error) {
@@ -144,12 +169,29 @@ export class OptimizedHarvestConnector {
     }
 
     // Filter out IDs we already have in cache
+    const allClientIds = Array.from(uniqueIds.clients);
+    const allProjectIds = Array.from(uniqueIds.projects);
+    const allTaskIds = Array.from(uniqueIds.tasks);
+    const allPeopleIds = Array.from(uniqueIds.people);
+
     const idsToLookup = {
-      clients: Array.from(uniqueIds.clients).filter(id => !this.globalIdCache.clients.has(id)),
-      projects: Array.from(uniqueIds.projects).filter(id => !this.globalIdCache.projects.has(id)),
-      tasks: Array.from(uniqueIds.tasks).filter(id => !this.globalIdCache.tasks.has(id)),
-      people: Array.from(uniqueIds.people).filter(id => !this.globalIdCache.people.has(id)),
+      clients: allClientIds.filter(id => !this.globalIdCache.clients.has(id)),
+      projects: allProjectIds.filter(id => !this.globalIdCache.projects.has(id)),
+      tasks: allTaskIds.filter(id => !this.globalIdCache.tasks.has(id)),
+      people: allPeopleIds.filter(id => !this.globalIdCache.people.has(id)),
     };
+
+    this.currentMetrics.cacheHits +=
+      allClientIds.length - idsToLookup.clients.length +
+      allProjectIds.length - idsToLookup.projects.length +
+      allTaskIds.length - idsToLookup.tasks.length +
+      allPeopleIds.length - idsToLookup.people.length;
+
+    this.currentMetrics.cacheMisses +=
+      idsToLookup.clients.length +
+      idsToLookup.projects.length +
+      idsToLookup.tasks.length +
+      idsToLookup.people.length;
 
     // Batch lookup missing IDs
     const [clientMappings, projectMappings, taskMappings, peopleMappings] = await Promise.all([
@@ -193,7 +235,7 @@ export class OptimizedHarvestConnector {
       const placeholders = harvestIds.map((_, index) => `$${index + 1}`).join(', ');
       const queryText = `SELECT id, harvest_id FROM ${table} WHERE harvest_id IN (${placeholders})`;
 
-      const result = await query<{ id: string; harvest_id: string }>(
+      const result = await this.runQuery<{ id: string; harvest_id: string }>(
         queryText,
         harvestIds
       );
@@ -305,9 +347,12 @@ export class OptimizedHarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/projects', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response: AxiosResponse<{ projects: any[]; next_page: number | null }> = await this.client.get(
+          '/projects',
+          {
+            params: { is_active: isActive, per_page: 100, page },
+          }
+        );
 
         projects.push(
           ...response.data.projects.map((p: any) => ({
@@ -338,9 +383,12 @@ export class OptimizedHarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/clients', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response: AxiosResponse<{ clients: any[]; next_page: number | null }> = await this.client.get(
+          '/clients',
+          {
+            params: { is_active: isActive, per_page: 100, page },
+          }
+        );
 
         clients.push(
           ...response.data.clients.map((c: any) => ({
@@ -369,9 +417,12 @@ export class OptimizedHarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/tasks', {
-          params: { per_page: 100, page },
-        });
+        const response: AxiosResponse<{ tasks: any[]; next_page: number | null }> = await this.client.get(
+          '/tasks',
+          {
+            params: { per_page: 100, page },
+          }
+        );
 
         tasks.push(
           ...response.data.tasks.map((t: any) => ({
@@ -401,9 +452,12 @@ export class OptimizedHarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/users', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response: AxiosResponse<{ users: any[]; next_page: number | null }> = await this.client.get(
+          '/users',
+          {
+            params: { is_active: isActive, per_page: 100, page },
+          }
+        );
 
         users.push(
           ...response.data.users.map((u: any) => ({
@@ -434,7 +488,7 @@ export class OptimizedHarvestConnector {
     budgetIsMonthly: boolean;
   }> {
     try {
-      const response = await this.client.get(`/projects/${projectId}`);
+      const response: AxiosResponse<{ project: any }> = await this.client.get(`/projects/${projectId}`);
       return {
         budget: response.data.project.budget,
         budgetBy: response.data.project.budget_by,
@@ -466,5 +520,24 @@ export class OptimizedHarvestConnector {
       });
       return false;
     }
+  }
+
+  getLastSyncMetrics(): HarvestSyncMetrics | null {
+    return this.lastMetrics ? { ...this.lastMetrics } : null;
+  }
+
+  private resetMetrics(): void {
+    this.currentMetrics = {
+      harvestRequests: 0,
+      dbQueryCount: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      entriesProcessed: 0,
+    };
+  }
+
+  private async runQuery<T extends QueryResultRow>(queryText: string, params: unknown[]): Promise<QueryResult<T>> {
+    this.currentMetrics.dbQueryCount += 1;
+    return query<T>(queryText, params);
   }
 }

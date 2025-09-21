@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, Flex, Grid, Text, Button, Select, Badge, Heading, Box, Tabs } from '@radix-ui/themes';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  AlertTriangle, 
+import {
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
   PoundSterling,
   Clock,
   Users,
@@ -16,13 +16,10 @@ import {
   RefreshCw,
   Download
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
+  PieChart,
+  Pie,
   Cell,
   XAxis, 
   YAxis, 
@@ -34,21 +31,93 @@ import {
   AreaChart
 } from 'recharts';
 import Link from "next/link";
-import { mockApiService } from '../src/services/mockData';
+import { subDays, format } from 'date-fns';
+import { apiService } from '../src/services/api.service';
 
 // Metric Card Component
 import { HarvestSummary } from "./components/HarvestSummary";
-function MetricCard({ 
-  title, 
-  value, 
-  change, 
-  icon: Icon, 
-  trend 
-}: { 
-  title: string; 
-  value: string; 
-  change?: string; 
-  icon: any; 
+
+type ProfitabilityRecord = {
+  client: string;
+  project: string;
+  recognisedRevenue: number;
+  billableCost: number;
+  exclusionCost: number;
+  margin: number;
+  marginPercentage: number;
+  exceptionsCount: number;
+};
+
+type ExceptionRecord = {
+  id: string;
+  type: string;
+  severity: 'high' | 'medium' | 'low';
+  description: string;
+  suggestedAction: string;
+  entityLabel?: string;
+};
+
+type TimeSeriesPoint = {
+  date: string;
+  revenue: number;
+  cost: number;
+  margin: number;
+  utilization: number;
+  totalHours: number;
+  billableHours: number;
+};
+
+type ProfitabilityApiRow = {
+  client?: string;
+  client_name?: string;
+  project?: string;
+  project_name?: string;
+  recognisedRevenue?: number;
+  recognised_revenue?: number;
+  billableCost?: number;
+  billable_cost?: number;
+  exclusionCost?: number;
+  exclusion_cost?: number;
+  margin?: number;
+  marginPercentage?: number;
+  margin_percentage?: number;
+  exceptionsCount?: number;
+  exceptions_count?: number;
+};
+
+type ExceptionApiRow = {
+  id?: string;
+  entryId?: string;
+  type?: string;
+  severity?: string;
+  description?: string;
+  suggestedAction?: string;
+  suggested_action?: string;
+  entityLabel?: string;
+  entity_label?: string;
+  entityType?: string;
+  entityId?: string;
+};
+
+type HarvestTimeEntryApiRow = {
+  spent_date?: string;
+  date?: string;
+  hours?: number;
+  billable?: boolean;
+  billable_rate?: number;
+  cost_rate?: number;
+};
+function MetricCard({
+  title,
+  value,
+  change,
+  icon: Icon,
+  trend
+}: {
+  title: string;
+  value: string;
+  change?: string;
+  icon: LucideIcon;
   trend?: 'up' | 'down' | 'neutral';
 }) {
   const trendColor = trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-600';
@@ -76,7 +145,7 @@ function MetricCard({
 }
 
 // Exception Alert Component
-function ExceptionAlert({ exception }: { exception: any }) {
+function ExceptionAlert({ exception }: { exception: ExceptionRecord }) {
   const severityColors = {
     high: 'red',
     medium: 'orange',
@@ -95,7 +164,9 @@ function ExceptionAlert({ exception }: { exception: any }) {
             {exception.severity}
           </Badge>
         </Flex>
-        <Text size="2" color="gray">{exception.clientName} - {exception.projectName}</Text>
+        {exception.entityLabel && (
+          <Text size="2" color="gray">{exception.entityLabel}</Text>
+        )}
         <Text size="2">{exception.description}</Text>
         <Text size="1" color="gray">Suggested: {exception.suggestedAction}</Text>
         <Flex gap="2" className="mt-2">
@@ -108,57 +179,168 @@ function ExceptionAlert({ exception }: { exception: any }) {
 }
 
 export default function Dashboard() {
-  const [profitabilityData, setProfitabilityData] = useState<any[]>([]);
-  const [exceptions, setExceptions] = useState<any[]>([]);
-  const [timeSeriesData, setTimeSeriesData] = useState<any[]>([]);
-  const [selectedClient, setSelectedClient] = useState('all');
+  const [profitabilityData, setProfitabilityData] = useState<ProfitabilityRecord[]>([]);
+  const [exceptions, setExceptions] = useState<ExceptionRecord[]>([]);
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesPoint[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('30');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [selectedPeriod]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profitData, exceptionsData, tsData] = await Promise.all([
-        mockApiService.getProfitabilityMetrics(),
-        mockApiService.getExceptions(),
-        mockApiService.getTimeSeriesData(parseInt(selectedPeriod))
+      const periodDays = Number.parseInt(selectedPeriod, 10) || 30;
+      const endDate = new Date();
+      const startDate = subDays(endDate, Math.max(periodDays - 1, 0));
+      const [profitData, exceptionsData, harvestData] = await Promise.all([
+        apiService.getPortfolioProfitability(format(endDate, 'yyyy-MM')) as Promise<ProfitabilityApiRow[]>,
+        apiService.getPendingExceptions() as Promise<ExceptionApiRow[]>,
+        apiService.getHarvestTimeEntries(
+          format(startDate, 'yyyy-MM-dd'),
+          format(endDate, 'yyyy-MM-dd')
+        ) as Promise<{ time_entries?: HarvestTimeEntryApiRow[] } | HarvestTimeEntryApiRow[]>
       ]);
-      
-      setProfitabilityData(profitData);
-      setExceptions(exceptionsData);
-      setTimeSeriesData(tsData);
+
+      const normalizedProfitability: ProfitabilityRecord[] = (profitData ?? []).map((item) => ({
+        client: item.client ?? item.client_name ?? 'Unknown client',
+        project: item.project ?? item.project_name ?? 'Unknown project',
+        recognisedRevenue: Number(item.recognisedRevenue ?? item.recognised_revenue ?? 0),
+        billableCost: Number(item.billableCost ?? item.billable_cost ?? 0),
+        exclusionCost: Number(item.exclusionCost ?? item.exclusion_cost ?? 0),
+        margin: Number(item.margin ?? 0),
+        marginPercentage: Number(item.marginPercentage ?? item.margin_percentage ?? 0),
+        exceptionsCount: Number(item.exceptionsCount ?? item.exceptions_count ?? 0),
+      }));
+
+      const normalizedExceptions: ExceptionRecord[] = (exceptionsData ?? []).map((exception) => {
+        const severity =
+          exception.severity === 'high' || exception.severity === 'low' || exception.severity === 'medium'
+            ? exception.severity
+            : 'medium';
+        return {
+          id:
+            exception.id ??
+            exception.entryId ??
+            `${exception.type ?? 'exception'}-${exception.entityId ?? Math.random().toString(36).slice(2)}`,
+          type: exception.type ?? 'unknown',
+          severity,
+        description: exception.description ?? 'No description provided',
+        suggestedAction:
+          exception.suggestedAction ?? exception.suggested_action ?? 'Review exception details',
+        entityLabel:
+          exception.entityLabel ??
+          exception.entity_label ??
+          (exception.entityType && exception.entityId
+            ? `${exception.entityType} ${exception.entityId}`
+            : exception.entityId ?? undefined),
+        };
+      });
+
+      const harvestResponse = harvestData as { time_entries?: HarvestTimeEntryApiRow[] } | HarvestTimeEntryApiRow[];
+      const harvestEntries: HarvestTimeEntryApiRow[] = Array.isArray(harvestResponse)
+        ? harvestResponse
+        : Array.isArray(harvestResponse?.time_entries)
+          ? harvestResponse.time_entries ?? []
+          : [];
+
+      const seriesMap = new Map<string, { revenue: number; cost: number; totalHours: number; billableHours: number }>();
+      for (const entry of harvestEntries) {
+        const date = entry.spent_date ?? entry.date;
+        if (!date) continue;
+        const hours = Number(entry.hours ?? 0);
+        const billableRate = Number(entry.billable_rate ?? 0);
+        const costRate = Number(entry.cost_rate ?? 0);
+        const revenue = entry.billable ? hours * billableRate : 0;
+        const cost = hours * costRate;
+
+        const existing = seriesMap.get(date) ?? {
+          revenue: 0,
+          cost: 0,
+          totalHours: 0,
+          billableHours: 0,
+        };
+
+        existing.revenue += revenue;
+        existing.cost += cost;
+        existing.totalHours += hours;
+        if (entry.billable) {
+          existing.billableHours += hours;
+        }
+
+        seriesMap.set(date, existing);
+      }
+
+      const normalizedSeries: TimeSeriesPoint[] = Array.from(seriesMap.entries())
+        .sort(([a], [b]) => (a > b ? 1 : -1))
+        .map(([date, values]) => {
+          const margin = values.revenue - values.cost;
+          const utilization = values.totalHours > 0 ? (values.billableHours / values.totalHours) * 100 : 0;
+          return {
+            date: format(new Date(date), 'MMM dd'),
+            revenue: values.revenue,
+            cost: values.cost,
+            margin,
+            utilization,
+            totalHours: values.totalHours,
+            billableHours: values.billableHours,
+          };
+        });
+
+      setProfitabilityData(normalizedProfitability);
+      setExceptions(normalizedExceptions);
+      setTimeSeriesData(normalizedSeries);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    void loadDashboardData();
+  }, [loadDashboardData]);
 
   const handleSync = async (source: string) => {
     setSyncing(source);
-    // Simulate sync delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    await loadDashboardData();
-    setSyncing(null);
+    try {
+      if (source === 'harvest') {
+        const periodDays = Number.parseInt(selectedPeriod, 10) || 30;
+        const endDate = new Date();
+        const startDate = subDays(endDate, Math.max(periodDays - 1, 0));
+        await apiService.syncHarvest(
+          format(startDate, 'yyyy-MM-dd'),
+          format(endDate, 'yyyy-MM-dd')
+        );
+      } else if (source === 'hubspot') {
+        await apiService.syncHubSpot();
+      }
+      await loadDashboardData();
+    } catch (error) {
+      console.error(`Failed to sync ${source}:`, error);
+    } finally {
+      setSyncing(null);
+    }
   };
 
   // Calculate summary metrics
-  const totalRevenue = profitabilityData.reduce((sum, d) => sum + d.totalRevenue, 0);
-  const totalProfit = profitabilityData.reduce((sum, d) => sum + (d.totalRevenue - d.totalCost), 0);
-  const avgMargin = profitabilityData.length > 0 
-    ? (profitabilityData.reduce((sum, d) => sum + parseFloat(d.profitMargin), 0) / profitabilityData.length).toFixed(1)
+  const totalRevenue = profitabilityData.reduce((sum, d) => sum + d.recognisedRevenue, 0);
+  const totalCost = profitabilityData.reduce(
+    (sum, d) => sum + d.billableCost + d.exclusionCost,
+    0
+  );
+  const totalProfit = profitabilityData.reduce((sum, d) => sum + d.margin, 0);
+  const avgMargin = profitabilityData.length > 0
+    ? (
+        profitabilityData.reduce((sum, d) => sum + d.marginPercentage, 0) /
+        profitabilityData.length
+      ).toFixed(1)
     : '0';
-  const totalHours = profitabilityData.reduce((sum, d) => sum + d.hoursWorked, 0);
+  const totalHours = timeSeriesData.reduce((sum, d) => sum + d.totalHours, 0);
 
   // Prepare chart data
   const pieData = profitabilityData.map(d => ({
-    name: d.clientName,
-    value: d.totalRevenue
+    name: d.client,
+    value: d.recognisedRevenue
   }));
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -245,11 +427,11 @@ export default function Dashboard() {
           trend="up"
         />
         <MetricCard
-          title="Weekly Hours"
-          value="1.5h"
-          change="This week"
-          icon={Clock}
-          trend="neutral"
+          title="Total Cost"
+          value={`£${totalCost.toLocaleString()}`}
+          change="Includes billable + exclusion"
+          icon={TrendingDown}
+          trend="down"
         />
       </Grid>
 
@@ -291,11 +473,11 @@ export default function Dashboard() {
                         fill="#0088FE" 
                         fillOpacity={0.6}
                       />
-                      <Area 
-                        type="monotone" 
-                        dataKey="profit" 
+                      <Area
+                        type="monotone"
+                        dataKey="margin"
                         stackId="2"
-                        stroke="#00C49F" 
+                        stroke="#00C49F"
                         fill="#00C49F"
                         fillOpacity={0.6}
                       />
@@ -323,7 +505,7 @@ export default function Dashboard() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: any) => `£${value.toLocaleString()}`} />
+                    <Tooltip formatter={(value: number | string) => `£${Number(value).toLocaleString()}`} />
                   </PieChart>
                 </ResponsiveContainer>
               </Card>
@@ -339,56 +521,45 @@ export default function Dashboard() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2">Client</th>
+                      <th className="text-left py-2">Project</th>
                       <th className="text-right py-2">Revenue</th>
                       <th className="text-right py-2">Cost</th>
-                      <th className="text-right py-2">Profit</th>
                       <th className="text-right py-2">Margin</th>
-                      <th className="text-right py-2">Budget Used</th>
-                      <th className="text-right py-2">Hours</th>
-                      <th className="text-right py-2">Avg Rate</th>
+                      <th className="text-right py-2">Margin %</th>
+                      <th className="text-right py-2">Exceptions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {profitabilityData.map((client) => {
-                      const profit = client.totalRevenue - client.totalCost;
+                    {profitabilityData.map((metric) => {
+                      const cost = metric.billableCost + metric.exclusionCost;
+                      const marginPercent = metric.marginPercentage.toFixed(1);
                       return (
-                        <tr key={client.clientId} className="border-b hover:bg-gray-50">
+                        <tr
+                          key={`${metric.client}-${metric.project}`}
+                          className="border-b hover:bg-gray-50"
+                        >
                           <td className="py-3">
-                            <Text weight="medium">{client.clientName}</Text>
+                            <Text weight="medium">{metric.client}</Text>
+                          </td>
+                          <td className="py-3">
+                            <Text color="gray">{metric.project}</Text>
                           </td>
                           <td className="text-right py-3">
-                            <Text color="green">£{client.totalRevenue.toLocaleString()}</Text>
+                            <Text color="green">£{metric.recognisedRevenue.toLocaleString()}</Text>
                           </td>
                           <td className="text-right py-3">
-                            <Text color="red">£{client.totalCost.toLocaleString()}</Text>
+                            <Text color="red">£{cost.toLocaleString()}</Text>
                           </td>
                           <td className="text-right py-3">
-                            <Text weight="medium">£{profit.toLocaleString()}</Text>
+                            <Text weight="medium">£{metric.margin.toLocaleString()}</Text>
                           </td>
                           <td className="text-right py-3">
-                            <Badge color={parseFloat(client.profitMargin) > 50 ? 'green' : 'orange'}>
-                              {client.profitMargin}%
+                            <Badge color={metric.marginPercentage > 50 ? 'green' : metric.marginPercentage > 25 ? 'orange' : 'red'}>
+                              {marginPercent}%
                             </Badge>
                           </td>
                           <td className="text-right py-3">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-20 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full ${
-                                    parseFloat(client.budgetUtilization) > 90 ? 'bg-red-500' : 
-                                    parseFloat(client.budgetUtilization) > 75 ? 'bg-orange-500' : 'bg-green-500'
-                                  }`}
-                                  style={{ width: `${Math.min(100, parseFloat(client.budgetUtilization))}%` }}
-                                />
-                              </div>
-                              <Text size="2">{client.budgetUtilization}%</Text>
-                            </div>
-                          </td>
-                          <td className="text-right py-3">
-                            {client.hoursWorked}
-                          </td>
-                          <td className="text-right py-3">
-                            £{client.averageRate}/hr
+                            <Text>{metric.exceptionsCount}</Text>
                           </td>
                         </tr>
                       );
@@ -467,29 +638,30 @@ export default function Dashboard() {
           {/* Clients Tab */}
           <Tabs.Content value="clients">
             <Grid columns="3" gap="4">
-              {profitabilityData.map((client) => {
-                const profit = client.totalRevenue - client.totalCost;
+              {profitabilityData.map((metric) => {
+                const cost = metric.billableCost + metric.exclusionCost;
                 return (
-                  <Card key={client.clientId} className="p-4">
+                  <Card key={`${metric.client}-${metric.project}`} className="p-4">
                     <Flex direction="column" gap="3">
-                      <Heading size="4">{client.clientName}</Heading>
+                      <Heading size="4">{metric.client}</Heading>
+                      <Text size="2" color="gray">{metric.project}</Text>
                       <Flex justify="between">
                         <Text size="2" color="gray">Revenue</Text>
-                        <Text size="2" weight="bold">£{client.totalRevenue.toLocaleString()}</Text>
+                        <Text size="2" weight="bold">£{metric.recognisedRevenue.toLocaleString()}</Text>
                       </Flex>
                       <Flex justify="between">
-                        <Text size="2" color="gray">Profit</Text>
-                        <Text size="2" weight="bold" color="green">£{profit.toLocaleString()}</Text>
+                        <Text size="2" color="gray">Cost</Text>
+                        <Text size="2" weight="bold" color="red">£{cost.toLocaleString()}</Text>
                       </Flex>
                       <Flex justify="between">
                         <Text size="2" color="gray">Margin</Text>
-                        <Badge color={parseFloat(client.profitMargin) > 50 ? 'green' : 'orange'}>
-                          {client.profitMargin}%
+                        <Badge color={metric.marginPercentage > 50 ? 'green' : metric.marginPercentage > 25 ? 'orange' : 'red'}>
+                          {metric.marginPercentage.toFixed(1)}%
                         </Badge>
                       </Flex>
                       <Flex justify="between">
-                        <Text size="2" color="gray">Hours</Text>
-                        <Text size="2" weight="bold">{client.hoursWorked}</Text>
+                        <Text size="2" color="gray">Exceptions</Text>
+                        <Text size="2" weight="bold">{metric.exceptionsCount}</Text>
                       </Flex>
                       <Button size="2" variant="soft">View Details</Button>
                     </Flex>

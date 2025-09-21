@@ -70,6 +70,10 @@ class ApiService {
     return this.request<any>(`/api/profitability?${params.toString()}`);
   }
 
+  async getPortfolioProfitability(month: string) {
+    return this.request<any>(`/api/profitability/portfolio/${month}`);
+  }
+
   // Time entries
   async getTimeEntries(fromDate: string, toDate: string, clientId?: string) {
     const params = new URLSearchParams({
@@ -79,6 +83,14 @@ class ApiService {
     });
 
     return this.request<any>(`/api/time-entries?${params.toString()}`);
+  }
+
+  async getHarvestTimeEntries(fromDate: string, toDate: string, page?: number) {
+    const params = new URLSearchParams({ from: fromDate, to: toDate });
+    if (page) {
+      params.append('page', page.toString());
+    }
+    return this.request<any>(`/api/harvest/time-entries?${params.toString()}`);
   }
 
   // Harvest sync
@@ -135,6 +147,14 @@ class ApiService {
     if (clientId) params.append('clientId', clientId);
 
     return this.request<any>(`/api/exceptions?${params.toString()}`);
+  }
+
+  async getPendingExceptions(clientId?: string) {
+    const params = new URLSearchParams();
+    if (clientId) params.append('clientId', clientId);
+    const query = params.toString();
+    const suffix = query ? `?${query}` : '';
+    return this.request<any>(`/api/exceptions/pending${suffix}`);
   }
 
   async updateException(id: string, data: any) {
