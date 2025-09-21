@@ -9,10 +9,17 @@ import {
 } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { captureException } from '../utils/sentry';
+import { query } from '../models/database';
+
+type HarvestIdCache = Map<string, string | null>;
 
 export class HarvestConnector {
   private client: AxiosInstance;
   private accountId: string;
+  private clientIdCache: HarvestIdCache = new Map();
+  private projectIdCache: HarvestIdCache = new Map();
+  private taskIdCache: HarvestIdCache = new Map();
+  private personIdCache: HarvestIdCache = new Map();
 
   constructor() {
     const accessToken = process.env.HARVEST_ACCESS_TOKEN;
@@ -62,7 +69,11 @@ export class HarvestConnector {
           params: { ...params, page },
         });
 
-        const entries = response.data.time_entries.map(this.mapTimeEntry);
+        const entries = await Promise.all(
+          response.data.time_entries.map((entry: HarvestTimeEntryApiResponse) =>
+            this.mapTimeEntry(entry)
+          )
+        );
         allEntries.push(...entries);
 
         page = response.data.next_page;
@@ -238,7 +249,34 @@ export class HarvestConnector {
     return this.getTimeEntries(fromDate, toDate, clientId);
   }
 
-  private mapTimeEntry(entry: HarvestTimeEntryApiResponse): HarvestTimeEntry {
+  private async mapTimeEntry(entry: HarvestTimeEntryApiResponse): Promise<HarvestTimeEntry> {
+    const [clientId, projectId, taskId, personId] = await Promise.all([
+      this.resolveLocalId(
+        'clients',
+        entry.client?.id ?? entry.client_id,
+        this.clientIdCache,
+        'client'
+      ),
+      this.resolveLocalId(
+        'projects',
+        entry.project?.id ?? entry.project_id,
+        this.projectIdCache,
+        'project'
+      ),
+      this.resolveLocalId(
+        'tasks',
+        entry.task?.id ?? entry.task_id,
+        this.taskIdCache,
+        'task'
+      ),
+      this.resolveLocalId(
+        'people',
+        entry.user?.id ?? entry.user_id,
+        this.personIdCache,
+        'person'
+      ),
+    ]);
+
     return {
       entryId: entry.id.toString(),
       date: new Date(entry.spent_date),
@@ -258,7 +296,46 @@ export class HarvestConnector {
       costAmount: entry.hours * (entry.cost_rate || 0),
       currency: 'GBP',
       externalRef: entry.external_reference?.id,
+      clientId,
+      projectId,
+      taskId,
+      personId,
     };
+  }
+
+  private async resolveLocalId(
+    table: 'clients' | 'projects' | 'tasks' | 'people',
+    harvestId: number | undefined,
+    cache: HarvestIdCache,
+    entity: string
+  ): Promise<string | null> {
+    if (!harvestId) {
+      return null;
+    }
+
+    const key = String(harvestId);
+    if (cache.has(key)) {
+      return cache.get(key) ?? null;
+    }
+
+    try {
+      const result = await query<{ id: string }>(
+        `SELECT id FROM ${table} WHERE harvest_id = $1`,
+        [key]
+      );
+      const localId = result.rows[0]?.id ?? null;
+      cache.set(key, localId);
+      return localId;
+    } catch (error) {
+      captureException(error, {
+        operation: 'HarvestConnector.resolveLocalId',
+        table,
+        harvestId: key,
+        entity,
+      });
+      cache.set(key, null);
+      return null;
+    }
   }
 
   async testConnection(): Promise<boolean> {

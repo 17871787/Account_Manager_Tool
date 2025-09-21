@@ -66,17 +66,42 @@ export default function createSyncRouter({
             entry.hours,
             entry.billableFlag,
             entry.notes,
+            entry.clientId ?? null,
+            entry.projectId ?? null,
+            entry.taskId ?? null,
+            entry.personId ?? null,
+            entry.billableAmount,
+            entry.costAmount,
           ]);
 
           await batchInsert(
             client,
             'time_entries',
-            ['harvest_entry_id', 'date', 'hours', 'billable_flag', 'notes'],
+            [
+              'harvest_entry_id',
+              'date',
+              'hours',
+              'billable_flag',
+              'notes',
+              'client_id',
+              'project_id',
+              'task_id',
+              'person_id',
+              'billable_amount',
+              'cost_amount',
+            ],
             records,
             `ON CONFLICT (harvest_entry_id) DO UPDATE SET
+              date = EXCLUDED.date,
               hours = EXCLUDED.hours,
               billable_flag = EXCLUDED.billable_flag,
-              notes = EXCLUDED.notes`
+              notes = EXCLUDED.notes,
+              client_id = EXCLUDED.client_id,
+              project_id = EXCLUDED.project_id,
+              task_id = EXCLUDED.task_id,
+              person_id = EXCLUDED.person_id,
+              billable_amount = EXCLUDED.billable_amount,
+              cost_amount = EXCLUDED.cost_amount`
           );
         }
 
