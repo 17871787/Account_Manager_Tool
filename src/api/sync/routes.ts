@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { HarvestConnector } from '../../connectors/harvest.connector';
+import {
+  HarvestConnector,
+  HarvestRetryConfig,
+  HarvestRetryError,
+} from '../../connectors/harvest.connector';
 import { SFTConnector } from '../../connectors/sft.connector';
 import { HubSpotConnector } from '../../connectors/hubspot.connector';
 import { getClient } from '../../models/database';
@@ -49,10 +53,31 @@ export default function createSyncRouter({
       });
       ({ fromDate, toDate, clientId } = schema.parse(req.body));
 
-      const entries = await connector.getTimeEntries(
+      const retryConfigEntries = (
+        [
+          ['maxAttempts', process.env.HARVEST_RETRY_MAX_ATTEMPTS],
+          ['baseDelayMs', process.env.HARVEST_RETRY_BASE_DELAY_MS],
+          ['maxDelayMs', process.env.HARVEST_RETRY_MAX_DELAY_MS],
+        ] as const
+      )
+        .map(([key, value]) => {
+          if (!value) return undefined;
+          const parsed = Number.parseInt(value, 10);
+          if (Number.isNaN(parsed) || parsed <= 0) {
+            return undefined;
+          }
+          return [key, parsed] as const;
+        })
+        .filter((entry): entry is readonly [keyof HarvestRetryConfig, number] => Boolean(entry));
+
+      const retryConfig = Object.fromEntries(retryConfigEntries) as Partial<HarvestRetryConfig>;
+
+      const { entries, retry } = await connector.getTimeEntries(
         new Date(fromDate),
         new Date(toDate),
-        clientId
+        clientId,
+        undefined,
+        retryConfig
       );
 
       const client = await getClient();
@@ -85,7 +110,8 @@ export default function createSyncRouter({
           success: true,
           entriesProcessed: entries.length,
           period: { fromDate, toDate },
-          source: 'harvest'
+          source: 'harvest',
+          retry,
         });
       } catch (err) {
         await client.query('ROLLBACK');
@@ -102,6 +128,12 @@ export default function createSyncRouter({
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
+      }
+      if (error instanceof HarvestRetryError) {
+        return res.status(error.retry.lastStatusCode ?? 503).json({
+          error: 'Harvest API retries exhausted',
+          retry: error.retry,
+        });
       }
       captureException(error, {
         operation: 'syncHarvest',

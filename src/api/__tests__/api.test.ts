@@ -27,10 +27,15 @@ describe('API endpoints', () => {
     setPool(mockPool as unknown as Pool);
     connectSpy = jest.spyOn(mockPool, 'connect').mockResolvedValue(mockClient);
 
+    const harvestEntries = [
+      { entryId: '1', date: new Date(), hours: 1, billableFlag: true, notes: 'test' }
+    ];
+
     harvestConnector = {
-      getTimeEntries: jest.fn().mockResolvedValue([
-        { entryId: '1', date: new Date(), hours: 1, billableFlag: true, notes: 'test' }
-      ])
+      getTimeEntries: jest.fn().mockResolvedValue({
+        entries: harvestEntries,
+        retry: { attempts: 1, maxAttempts: 5, totalDelayMs: 0, lastDelayMs: 0 },
+      }),
     } as any;
     hubspotConnector = {
       syncRevenueData: jest.fn().mockResolvedValue({ success: true, recordsProcessed: 2 })
@@ -70,6 +75,7 @@ describe('API endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body.source).toBe('harvest');
     expect(res.body.entriesProcessed).toBe(1);
+    expect(res.body.retry).toMatchObject({ attempts: 1, maxAttempts: 5 });
   });
 
   it('chunks Harvest inserts to avoid parameter limit', async () => {
@@ -81,7 +87,10 @@ describe('API endpoints', () => {
       notes: 'test',
     }));
 
-    harvestConnector.getTimeEntries.mockResolvedValue(entries);
+    harvestConnector.getTimeEntries.mockResolvedValue({
+      entries,
+      retry: { attempts: 1, maxAttempts: 5, totalDelayMs: 0, lastDelayMs: 0 },
+    });
 
     const res = await request(app)
       .post('/api/sync/harvest')
@@ -92,6 +101,7 @@ describe('API endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.entriesProcessed).toBe(entries.length);
+    expect(res.body.retry.attempts).toBe(1);
 
     const insertCalls = mockClient.query.mock.calls.filter(
       ([query]) => typeof query === 'string' && query.includes('INSERT INTO time_entries')
