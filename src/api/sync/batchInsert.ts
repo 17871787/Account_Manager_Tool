@@ -38,4 +38,4 @@ export async function batchInsert(
   }
 }
 
-export { RecordRow };
+export type { RecordRow };

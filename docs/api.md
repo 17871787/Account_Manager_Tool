@@ -144,6 +144,20 @@ Sync monthly revenue from Sales Forecast Tracker.
 }
 ```
 
+## HubSpot Deals Upload Storage
+
+The `/app/api/hubspot/upload` routes persist uploaded deal files to the
+`hubspot_deal_imports` table in PostgreSQL. Each record stores the parsed deal
+payload as JSON (`data` column) along with a deterministic `sort_order` so the
+API can return the deals in the same order they were imported.
+
+- Storage is transactional: existing rows are removed and the new snapshot is
+  inserted inside a single transaction to avoid partially written uploads.
+- Re-importing the same deal updates the existing row and refreshes the
+  `updated_at` timestamp.
+- Clearing the cache (`DELETE /app/api/hubspot/upload`) simply truncates the
+  table, ensuring durability across deployments and server restarts.
+
 ## Exceptions
 
 ### `GET /api/exceptions/pending`

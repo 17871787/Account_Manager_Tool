@@ -186,6 +186,18 @@ CREATE TABLE IF NOT EXISTS invoice_exports (
     generated_by UUID REFERENCES users(id)
 );
 
+-- HubSpot imported deals storage for durable uploads
+CREATE TABLE IF NOT EXISTS hubspot_deal_imports (
+    deal_id TEXT PRIMARY KEY,
+    data JSONB NOT NULL,
+    sort_order INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_hubspot_deal_imports_sort_order
+    ON hubspot_deal_imports (sort_order);
+
 -- Create indexes for performance
 CREATE INDEX idx_time_entries_date ON time_entries(date);
 CREATE INDEX idx_time_entries_client_project ON time_entries(client_id, project_id);
@@ -212,4 +224,6 @@ CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks
 CREATE TRIGGER update_people_updated_at BEFORE UPDATE ON people
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_exceptions_updated_at BEFORE UPDATE ON exceptions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_hubspot_deal_imports_updated_at BEFORE UPDATE ON hubspot_deal_imports
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
