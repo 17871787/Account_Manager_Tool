@@ -1,5 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { captureException } from '../utils/sentry';
+import { executeWithRetry } from './retry';
+import { ThrottlingError } from '../errors/ThrottlingError';
 
 export interface HubSpotDeal {
   id: string;
@@ -49,58 +51,81 @@ export class HubSpotConnector {
 
   async getDeals(limit = 100): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/deals', {
-        params: {
-          limit,
-          properties: 'dealname,amount,closedate,dealstage,pipeline,hs_arr,hs_mrr,hs_tcv,hs_acv',
-        },
-      });
+      const response = await executeWithRetry(
+        () =>
+          this.client.get('/crm/v3/objects/deals', {
+            params: {
+              limit,
+              properties:
+                'dealname,amount,closedate,dealstage,pipeline,hs_arr,hs_mrr,hs_tcv,hs_acv',
+            },
+          }),
+        { context: 'HubSpotConnector.getDeals' }
+      );
       return response.data.results;
     } catch (error) {
-      captureException(error, {
-        operation: 'HubSpotConnector.getDeals',
-        limit,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HubSpotConnector.getDeals',
+          limit,
+        });
+      }
       throw error;
     }
   }
 
   async getCompanies(limit = 100): Promise<HubSpotCompany[]> {
     try {
-      const response = await this.client.get('/crm/v3/objects/companies', {
-        params: {
-          limit,
-          properties: 'name,domain,industry,annualrevenue,numberofemployees,lifecyclestage',
-        },
-      });
+      const response = await executeWithRetry(
+        () =>
+          this.client.get('/crm/v3/objects/companies', {
+            params: {
+              limit,
+              properties: 'name,domain,industry,annualrevenue,numberofemployees,lifecyclestage',
+            },
+          }),
+        { context: 'HubSpotConnector.getCompanies' }
+      );
       return response.data.results;
     } catch (error) {
-      captureException(error, {
-        operation: 'HubSpotConnector.getCompanies',
-        limit,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HubSpotConnector.getCompanies',
+          limit,
+        });
+      }
       throw error;
     }
   }
 
   async getDealsByCompany(companyId: string): Promise<HubSpotDeal[]> {
     try {
-      const response = await this.client.get(`/crm/v3/objects/companies/${companyId}/associations/deals`);
+      const response = await executeWithRetry(
+        () =>
+          this.client.get(`/crm/v3/objects/companies/${companyId}/associations/deals`),
+        { context: 'HubSpotConnector.getDealsByCompany' }
+      );
       const dealIds = response.data.results.map((r: { id: string }) => r.id);
       
       if (dealIds.length === 0) return [];
       
-      const dealsResponse = await this.client.post('/crm/v3/objects/deals/batch/read', {
-        inputs: dealIds.map((id: string) => ({ id })),
-        properties: ['dealname', 'amount', 'closedate', 'dealstage', 'pipeline'],
-      });
+      const dealsResponse = await executeWithRetry(
+        () =>
+          this.client.post('/crm/v3/objects/deals/batch/read', {
+            inputs: dealIds.map((id: string) => ({ id })),
+            properties: ['dealname', 'amount', 'closedate', 'dealstage', 'pipeline'],
+          }),
+        { context: 'HubSpotConnector.getDealsByCompany' }
+      );
 
       return dealsResponse.data.results;
     } catch (error) {
-      captureException(error, {
-        operation: 'HubSpotConnector.getDealsByCompany',
-        companyId,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HubSpotConnector.getDealsByCompany',
+          companyId,
+        });
+      }
       throw error;
     }
   }
@@ -115,16 +140,20 @@ export class HubSpotConnector {
   } | null> {
     try {
       // Search for company by name
-      const searchResponse = await this.client.post('/crm/v3/objects/companies/search', {
-        filterGroups: [{
-          filters: [{
-            propertyName: 'name',
-            operator: 'EQ',
-            value: companyName,
-          }],
-        }],
-        properties: ['name', 'annualrevenue'],
-      });
+      const searchResponse = await executeWithRetry(
+        () =>
+          this.client.post('/crm/v3/objects/companies/search', {
+            filterGroups: [{
+              filters: [{
+                propertyName: 'name',
+                operator: 'EQ',
+                value: companyName,
+              }],
+            }],
+            properties: ['name', 'annualrevenue'],
+          }),
+        { context: 'HubSpotConnector.getRevenueMetrics' }
+      );
 
       if (searchResponse.data.results.length === 0) {
         return null;
@@ -155,6 +184,9 @@ export class HubSpotConnector {
         closedDealCount: closedWonDeals.length,
       };
     } catch (error) {
+      if (error instanceof ThrottlingError) {
+        throw error;
+      }
       captureException(error, {
         operation: 'HubSpotConnector.getRevenueMetrics',
         companyName,
@@ -182,6 +214,9 @@ export class HubSpotConnector {
         recordsProcessed: processed,
       };
     } catch (error) {
+      if (error instanceof ThrottlingError) {
+        throw error;
+      }
       captureException(error, {
         operation: 'HubSpotConnector.syncRevenueData',
       });
@@ -194,14 +229,20 @@ export class HubSpotConnector {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.client.get('/crm/v3/objects/companies', {
-        params: { limit: 1 },
-      });
+      await executeWithRetry(
+        () =>
+          this.client.get('/crm/v3/objects/companies', {
+            params: { limit: 1 },
+          }),
+        { context: 'HubSpotConnector.testConnection' }
+      );
       return true;
     } catch (error) {
-      captureException(error, {
-        operation: 'HubSpotConnector.testConnection',
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HubSpotConnector.testConnection',
+        });
+      }
       return false;
     }
   }

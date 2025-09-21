@@ -4,6 +4,8 @@ import createApiRouter from '../routes';
 import { DEFAULT_BATCH_SIZE } from '../sync/batchInsert';
 import { setPool } from '../../models/database';
 import { Pool, PoolClient } from 'pg';
+import { resetRateLimit } from '../../middleware/auth';
+import { ThrottlingError } from '../../errors/ThrottlingError';
 
 let mockClient: jest.Mocked<PoolClient>;
 let mockPool: jest.Mocked<Pool>;
@@ -17,6 +19,7 @@ describe('API endpoints', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    resetRateLimit();
     mockClient = {
       query: jest.fn().mockResolvedValue({ rows: [] }),
       release: jest.fn(),
@@ -223,5 +226,51 @@ describe('API endpoints', () => {
     } else {
       delete process.env.MS_CLIENT_SECRET;
     }
+  });
+
+  it('enforces sync endpoint rate limits', async () => {
+    const previousLimit = process.env.SYNC_RATE_LIMIT_PER_MINUTE;
+    process.env.SYNC_RATE_LIMIT_PER_MINUTE = '1';
+
+    const first = await request(app)
+      .post('/api/sync/harvest')
+      .send({
+        fromDate: new Date().toISOString(),
+        toDate: new Date().toISOString(),
+      });
+
+    const second = await request(app)
+      .post('/api/sync/harvest')
+      .send({
+        fromDate: new Date().toISOString(),
+        toDate: new Date().toISOString(),
+      });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(429);
+    expect(second.body.error).toMatch(/Rate limit/);
+
+    if (previousLimit) {
+      process.env.SYNC_RATE_LIMIT_PER_MINUTE = previousLimit;
+    } else {
+      delete process.env.SYNC_RATE_LIMIT_PER_MINUTE;
+    }
+    resetRateLimit();
+  });
+
+  it('returns 429 when connectors exhaust their retry budget', async () => {
+    harvestConnector.getTimeEntries.mockRejectedValue(
+      new ThrottlingError('Harvest rate limit exceeded')
+    );
+
+    const res = await request(app)
+      .post('/api/sync/harvest')
+      .send({
+        fromDate: new Date().toISOString(),
+        toDate: new Date().toISOString(),
+      });
+
+    expect(res.status).toBe(429);
+    expect(res.body.error).toContain('Harvest');
   });
 });

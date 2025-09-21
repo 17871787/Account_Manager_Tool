@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { SFTRevenue } from '../types';
 import { captureException } from '../utils/sentry';
+import { executeWithRetry } from './retry';
+import { ThrottlingError } from '../errors/ThrottlingError';
 
 export class SFTConnector {
   private accessToken: string | null = null;
@@ -28,26 +30,32 @@ export class SFTConnector {
 
   async authenticate(): Promise<void> {
     try {
-      const response = await axios.post(
-        `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`,
-        new URLSearchParams({
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          scope: 'https://graph.microsoft.com/.default',
-          grant_type: 'client_credentials',
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
+      const response = await executeWithRetry(
+        () =>
+          axios.post(
+            `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`,
+            new URLSearchParams({
+              client_id: this.clientId,
+              client_secret: this.clientSecret,
+              scope: 'https://graph.microsoft.com/.default',
+              grant_type: 'client_credentials',
+            }),
+            {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+            }
+          ),
+        { context: 'SFTConnector.authenticate' }
       );
 
       this.accessToken = response.data.access_token;
     } catch (error) {
-      captureException(error, {
-        operation: 'SFTConnector.authenticate',
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'SFTConnector.authenticate',
+        });
+      }
       throw error;
     }
   }

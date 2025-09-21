@@ -9,6 +9,8 @@ import {
 } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { captureException } from '../utils/sentry';
+import { executeWithRetry } from './retry';
+import { ThrottlingError } from '../errors/ThrottlingError';
 
 export class HarvestConnector {
   private client: AxiosInstance;
@@ -58,9 +60,13 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/time_entries', {
-          params: { ...params, page },
-        });
+        const response = await executeWithRetry(
+          () =>
+            this.client.get('/time_entries', {
+              params: { ...params, page },
+            }),
+          { context: 'HarvestConnector.getTimeEntries' }
+        );
 
         const entries = response.data.time_entries.map(this.mapTimeEntry);
         allEntries.push(...entries);
@@ -70,13 +76,15 @@ export class HarvestConnector {
 
       return allEntries;
     } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.getTimeEntries',
-        fromDate,
-        toDate,
-        clientId,
-        projectId,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HarvestConnector.getTimeEntries',
+          fromDate,
+          toDate,
+          clientId,
+          projectId,
+        });
+      }
       throw error;
     }
   }
@@ -87,9 +95,13 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/projects', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response = await executeWithRetry(
+          () =>
+            this.client.get('/projects', {
+              params: { is_active: isActive, per_page: 100, page },
+            }),
+          { context: 'HarvestConnector.getProjects' }
+        );
 
         projects.push(
           ...response.data.projects.map((p: any) => ({
@@ -106,10 +118,12 @@ export class HarvestConnector {
 
       return projects;
     } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.getProjects',
-        isActive,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HarvestConnector.getProjects',
+          isActive,
+        });
+      }
       throw error;
     }
   }
@@ -120,9 +134,13 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/clients', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response = await executeWithRetry(
+          () =>
+            this.client.get('/clients', {
+              params: { is_active: isActive, per_page: 100, page },
+            }),
+          { context: 'HarvestConnector.getClients' }
+        );
 
         clients.push(
           ...response.data.clients.map((c: any) => ({
@@ -137,10 +155,12 @@ export class HarvestConnector {
 
       return clients;
     } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.getClients',
-        isActive,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HarvestConnector.getClients',
+          isActive,
+        });
+      }
       throw error;
     }
   }
@@ -151,9 +171,13 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/tasks', {
-          params: { per_page: 100, page },
-        });
+        const response = await executeWithRetry(
+          () =>
+            this.client.get('/tasks', {
+              params: { per_page: 100, page },
+            }),
+          { context: 'HarvestConnector.getTasks' }
+        );
 
         tasks.push(
           ...response.data.tasks.map((t: any) => ({
@@ -170,9 +194,11 @@ export class HarvestConnector {
 
       return tasks;
     } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.getTasks',
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HarvestConnector.getTasks',
+        });
+      }
       throw error;
     }
   }
@@ -183,9 +209,13 @@ export class HarvestConnector {
       let page: number | null = 1;
 
       while (page !== null) {
-        const response = await this.client.get('/users', {
-          params: { is_active: isActive, per_page: 100, page },
-        });
+        const response = await executeWithRetry(
+          () =>
+            this.client.get('/users', {
+              params: { is_active: isActive, per_page: 100, page },
+            }),
+          { context: 'HarvestConnector.getUsers' }
+        );
 
         users.push(
           ...response.data.users.map((u: any) => ({
@@ -202,10 +232,12 @@ export class HarvestConnector {
 
       return users;
     } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.getUsers',
-        isActive,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HarvestConnector.getUsers',
+          isActive,
+        });
+      }
       throw error;
     }
   }
@@ -216,17 +248,22 @@ export class HarvestConnector {
     budgetIsMonthly: boolean;
   }> {
     try {
-      const response = await this.client.get(`/projects/${projectId}`);
+      const response = await executeWithRetry(
+        () => this.client.get(`/projects/${projectId}`),
+        { context: 'HarvestConnector.getProjectBudget' }
+      );
       return {
         budget: response.data.project.budget,
         budgetBy: response.data.project.budget_by,
         budgetIsMonthly: response.data.project.budget_is_monthly,
       };
     } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.getProjectBudget',
-        projectId,
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HarvestConnector.getProjectBudget',
+          projectId,
+        });
+      }
       throw error;
     }
   }
@@ -263,12 +300,17 @@ export class HarvestConnector {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.client.get('/company');
+      await executeWithRetry(
+        () => this.client.get('/company'),
+        { context: 'HarvestConnector.testConnection' }
+      );
       return true;
     } catch (error) {
-      captureException(error, {
-        operation: 'HarvestConnector.testConnection',
-      });
+      if (!(error instanceof ThrottlingError)) {
+        captureException(error, {
+          operation: 'HarvestConnector.testConnection',
+        });
+      }
       return false;
     }
   }

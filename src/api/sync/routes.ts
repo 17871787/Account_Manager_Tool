@@ -6,6 +6,15 @@ import { HubSpotConnector } from '../../connectors/hubspot.connector';
 import { getClient } from '../../models/database';
 import { captureException } from '../../utils/sentry';
 import { batchInsert } from './batchInsert';
+import { checkRateLimit } from '../../middleware/auth';
+import { ThrottlingError } from '../../errors/ThrottlingError';
+
+const DEFAULT_SYNC_RATE_LIMIT = 30;
+
+function resolveRateLimit(): number {
+  const configured = Number(process.env.SYNC_RATE_LIMIT_PER_MINUTE);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_SYNC_RATE_LIMIT;
+}
 
 export interface SyncRouterDeps {
   harvestConnector?: HarvestConnector;
@@ -26,6 +35,9 @@ export default function createSyncRouter({
     let toDate: string | undefined;
     let clientId: string | undefined;
     try {
+      if (!checkRateLimit(`sync:harvest:${req.ip ?? 'global'}`, resolveRateLimit())) {
+        return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+      }
       if (harvestConnector) {
         connector = harvestConnector;
       } else {
@@ -100,6 +112,9 @@ export default function createSyncRouter({
         client.release();
       }
     } catch (error) {
+      if (error instanceof ThrottlingError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
@@ -113,45 +128,54 @@ export default function createSyncRouter({
     }
   });
 
-router.post('/sync/hubspot', async (req: Request, res: Response) => {
-  let connector: HubSpotConnector;
-  try {
-    if (hubspotConnector) {
-      connector = hubspotConnector;
-    } else {
-      const required = ['HUBSPOT_API_KEY'];
-      const missing = required.filter((v) => !process.env[v]);
-      if (missing.length) {
-        return res
-          .status(500)
-          .json({ error: `Missing environment variables: ${missing.join(', ')}` });
+  router.post('/sync/hubspot', async (req: Request, res: Response) => {
+    let connector: HubSpotConnector;
+    try {
+      if (!checkRateLimit(`sync:hubspot:${req.ip ?? 'global'}`, resolveRateLimit())) {
+        return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
       }
-      connector = new HubSpotConnector();
-    }
-    z.object({}).parse(req.body);
-    const result = await connector.syncRevenueData();
+      if (hubspotConnector) {
+        connector = hubspotConnector;
+      } else {
+        const required = ['HUBSPOT_API_KEY'];
+        const missing = required.filter((v) => !process.env[v]);
+        if (missing.length) {
+          return res
+            .status(500)
+            .json({ error: `Missing environment variables: ${missing.join(', ')}` });
+        }
+        connector = new HubSpotConnector();
+      }
+      z.object({}).parse(req.body);
+      const result = await connector.syncRevenueData();
 
-    res.json({
-      success: result.success,
-      recordsProcessed: result.recordsProcessed,
-      source: 'hubspot',
-      message: `Synced ${result.recordsProcessed} company revenue records from HubSpot`
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
+      res.json({
+        success: result.success,
+        recordsProcessed: result.recordsProcessed,
+        source: 'hubspot',
+        message: `Synced ${result.recordsProcessed} company revenue records from HubSpot`
+      });
+    } catch (error) {
+      if (error instanceof ThrottlingError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      captureException(error, {
+        operation: 'syncHubSpot',
+      });
+      res.status(500).json({ error: 'Failed to sync HubSpot data' });
     }
-    captureException(error, {
-      operation: 'syncHubSpot',
-    });
-    res.status(500).json({ error: 'Failed to sync HubSpot data' });
-  }
-});
+  });
 
   router.post('/sync/sft', async (req: Request, res: Response) => {
     let connector: SFTConnector;
     let monthStr: string | undefined;
     try {
+      if (!checkRateLimit(`sync:sft:${req.ip ?? 'global'}`, resolveRateLimit())) {
+        return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+      }
       if (sftConnector) {
         connector = sftConnector;
       } else {
@@ -212,6 +236,9 @@ router.post('/sync/hubspot', async (req: Request, res: Response) => {
         client.release();
       }
     } catch (error) {
+      if (error instanceof ThrottlingError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }

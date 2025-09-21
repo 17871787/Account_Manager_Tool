@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { HarvestConnector } from '../harvest.connector';
+import { ThrottlingError } from '../../errors/ThrottlingError';
 
 jest.mock('axios');
 
@@ -11,7 +12,10 @@ describe('HarvestConnector', () => {
       ...originalEnv,
       HARVEST_ACCESS_TOKEN: 'token',
       HARVEST_ACCOUNT_ID: 'account',
+      CONNECTOR_MAX_RETRIES: '2',
+      CONNECTOR_RETRY_BASE_DELAY_MS: '0',
     };
+    (axios as any).isAxiosError = jest.fn((error: any) => !!error?.isAxiosError);
   });
 
   afterEach(() => {
@@ -26,6 +30,37 @@ describe('HarvestConnector', () => {
     const connector = new HarvestConnector();
     await expect(connector.testConnection()).resolves.toBe(true);
     expect(getMock).toHaveBeenCalledWith('/company');
+  });
+
+  it('retries Harvest requests after throttling responses', async () => {
+    const throttled = { isAxiosError: true, response: { status: 429, headers: {} } } as any;
+    const getMock = jest
+      .fn()
+      .mockRejectedValueOnce(throttled)
+      .mockResolvedValueOnce({ data: { time_entries: [], next_page: null } });
+    (axios.create as jest.Mock).mockReturnValue({ get: getMock });
+
+    const connector = new HarvestConnector();
+    const from = new Date('2023-01-01');
+    const to = new Date('2023-01-31');
+
+    const entries = await connector.getTimeEntries(from, to);
+
+    expect(entries).toEqual([]);
+    expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws ThrottlingError when retries are exhausted', async () => {
+    const throttled = { isAxiosError: true, response: { status: 429, headers: {} } } as any;
+    const getMock = jest.fn().mockRejectedValue(throttled);
+    (axios.create as jest.Mock).mockReturnValue({ get: getMock });
+
+    const connector = new HarvestConnector();
+
+    await expect(
+      connector.getTimeEntries(new Date('2023-01-01'), new Date('2023-01-31'))
+    ).rejects.toBeInstanceOf(ThrottlingError);
+    expect(getMock).toHaveBeenCalledTimes(2);
   });
 
   it('getTimeEntries accumulates paginated results', async () => {

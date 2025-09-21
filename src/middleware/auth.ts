@@ -60,3 +60,11 @@ export function checkRateLimit(
   record.count++;
   return true;
 }
+
+export function resetRateLimit(identifier?: string): void {
+  if (identifier) {
+    requestCounts.delete(identifier);
+  } else {
+    requestCounts.clear();
+  }
+}
