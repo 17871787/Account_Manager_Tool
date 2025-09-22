@@ -1,19 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+
+// Import the latestData from upload route
+let latestData: any = null;
+
+export function setLatestData(data: any) {
+  latestData = data;
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const dataDir = path.join(process.cwd(), 'data');
-    const latestFile = path.join(dataDir, 'latest.json');
-
-    try {
-      const data = await fs.readFile(latestFile, 'utf-8');
-      return NextResponse.json(JSON.parse(data));
-    } catch (error) {
-      // No data yet
-      return NextResponse.json(null);
+    // Return the in-memory data
+    if (latestData) {
+      return NextResponse.json(latestData);
     }
+
+    // Try to get from upload endpoint
+    try {
+      const baseUrl = request.nextUrl.origin;
+      const uploadResponse = await fetch(`${baseUrl}/api/upload`);
+      if (uploadResponse.ok) {
+        const data = await uploadResponse.json();
+        if (data) {
+          return NextResponse.json(data);
+        }
+      }
+    } catch {
+      // Ignore fetch errors
+    }
+
+    // No data available
+    return NextResponse.json(null);
   } catch (error) {
     console.error('Dashboard error:', error);
     return NextResponse.json(
