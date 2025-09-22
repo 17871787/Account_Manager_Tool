@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { fetchWithSession } from '../src/utils/fetchWithSession';
 
 export default function SentryExamplePage() {
   const [testType, setTestType] = useState<string>('');
@@ -16,7 +17,7 @@ export default function SentryExamplePage() {
   };
 
   const triggerAsyncError = async () => {
-    const response = await fetch('/api/non-existent-endpoint');
+    const response = await fetchWithSession('/api/non-existent-endpoint');
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`);
     }

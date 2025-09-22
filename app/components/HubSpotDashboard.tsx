@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { fetchWithSession } from "../../src/utils/fetchWithSession";
 
 interface Contact {
   id: string;
@@ -54,7 +55,7 @@ export function HubSpotDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/hubspot/contacts?limit=50");
+      const response = await fetchWithSession("/api/hubspot/contacts?limit=50");
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
@@ -74,7 +75,7 @@ export function HubSpotDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/hubspot/companies?limit=50");
+      const response = await fetchWithSession("/api/hubspot/companies?limit=50");
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
@@ -94,7 +95,7 @@ export function HubSpotDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/hubspot/deals?limit=50");
+      const response = await fetchWithSession("/api/hubspot/deals?limit=50");
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
