@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { checkRateLimit, isApiKeyAuthorized, isSessionTokenAuthorized } from './auth';
+import { checkRateLimit, SESSION_COOKIE_NAME, verifySessionToken } from './auth';
 
 export interface RateLimitOptions {
   limit?: number;
@@ -51,37 +51,35 @@ function parseCookie(header: string | undefined, name: string): string | undefin
 }
 
 function getSessionToken(req: Request): string | undefined {
-  const fromCookieParser = (req as Request & { cookies?: Record<string, string> }).cookies?.['session-token'];
+  const fromCookieParser = (req as Request & { cookies?: Record<string, string> }).cookies?.[SESSION_COOKIE_NAME];
   if (fromCookieParser) {
     return fromCookieParser;
   }
-  return parseCookie(req.headers.cookie, 'session-token');
-}
-
-function normalizeHeaderValue(value: string | string[] | undefined): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-  return Array.isArray(value) ? value[0] : value;
+  return parseCookie(req.headers.cookie, SESSION_COOKIE_NAME);
 }
 
 export function requireExpressAuth(req: Request, res: Response, next: NextFunction): void {
-  const apiKey = normalizeHeaderValue(req.headers['x-api-key']);
-  if (isApiKeyAuthorized(apiKey)) {
-    next();
-    return;
-  }
-
   const sessionToken = getSessionToken(req);
-  if (isSessionTokenAuthorized(sessionToken)) {
-    next();
-    return;
-  }
 
-  res.status(401).json({
-    error: 'Unauthorized',
-    message: 'Valid authentication required to access this endpoint',
-  });
+  verifySessionToken(sessionToken)
+    .then((payload) => {
+      if (payload) {
+        next();
+        return;
+      }
+
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Valid authentication required to access this endpoint',
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to verify session token', error);
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Valid authentication required to access this endpoint',
+      });
+    });
 }
 
 export function createRateLimitMiddleware(options: RateLimitOptions = {}) {

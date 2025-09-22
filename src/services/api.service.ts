@@ -5,7 +5,6 @@
 
 interface ApiConfig {
   baseUrl?: string;
-  apiKey?: string;
   headers?: Record<string, string>;
 }
 
@@ -19,12 +18,6 @@ class ApiService {
       'Content-Type': 'application/json',
       ...config.headers,
     };
-
-    // Add API key if provided
-    const apiKey = config.apiKey || process.env.NEXT_PUBLIC_API_KEY;
-    if (apiKey) {
-      this.headers['x-api-key'] = apiKey;
-    }
   }
 
   private async request<T>(
@@ -36,6 +29,7 @@ class ApiService {
     try {
       const response = await fetch(url, {
         ...options,
+        credentials: options.credentials ?? 'include',
         headers: {
           ...this.headers,
           ...options.headers,
