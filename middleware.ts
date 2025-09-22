@@ -7,7 +7,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Allow auth endpoints without session
-  if (request.nextUrl.pathname.startsWith('/api/auth/')) {
+  if (request.nextUrl.pathname.startsWith('/api/auth/') ||
+      request.nextUrl.pathname === '/api/health') {
     return NextResponse.next();
   }
 
