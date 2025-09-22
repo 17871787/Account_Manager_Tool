@@ -17,14 +17,17 @@ export async function POST(request: NextRequest) {
 
   const { username, password } = body;
 
-  const expectedUsername = process.env.AUTH_USERNAME;
-  const expectedPassword = process.env.AUTH_PASSWORD;
+  // Hardcoded fallback credentials for personal use
+  const hardcodedUsername = 'joe';
+  const hardcodedPassword = 'demo2025';
 
-  if (!expectedUsername || !expectedPassword || !process.env.SESSION_SECRET) {
-    return NextResponse.json(
-      { error: 'Authentication is not configured on the server' },
-      { status: 500 }
-    );
+  // Try environment variables first, fall back to hardcoded
+  const expectedUsername = process.env.AUTH_USERNAME || hardcodedUsername;
+  const expectedPassword = process.env.AUTH_PASSWORD || hardcodedPassword;
+
+  if (!process.env.SESSION_SECRET) {
+    // Use a default session secret for development/personal use
+    process.env.SESSION_SECRET = 'default-session-secret-for-joe-account-manager-tool-2025';
   }
 
   if (!username || !password) {
