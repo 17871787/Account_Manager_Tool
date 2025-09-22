@@ -1,240 +1,81 @@
-# AM Copilot - Account Manager Profitability Dashboard
+# Account Manager Tool - Personal Profitability Dashboard
 
-AI-powered profitability tracking and billing management system for Map of Ag's dairy industry clients.
+Simple profitability tracking dashboard for dairy account management.
 
 ## 🚀 Live Demo
 
-**Production URL**: [https://am-copilot.vercel.app](https://am-copilot-dp2gps1l8-joe-towers-projects.vercel.app)
+**Production URL**: [https://am-copilot.vercel.app](https://am-copilot.vercel.app)
+- **Username**: joe
+- **Password**: demo2025
 
 ## Overview
 
-AM Copilot provides real-time profitability insights and automated exception management for account managers working with major dairy industry clients including Arla, Saputo, Aldi, Long Clawson, Crediton, Lactalis, and Leprino.
+Personal tool for tracking account profitability with weekly CSV uploads (HubSpot exports, Finance forecasts) and Harvest time tracking integration.
 
-### Key Features
+## Use Case
 
-- 📊 **Live Profitability Tracking** - Real-time margin analysis per client/project
-- 🚨 **Automated Exception Detection** - Intelligent alerts for budget breaches, rate mismatches, and unbilled hours
-- 💰 **Revenue & Cost Analysis** - Comprehensive financial metrics with trend visualization
-- 📈 **Interactive Dashboards** - Dynamic charts showing revenue trends, client distribution, and budget utilization
-- 🔄 **API Integrations** - Seamless sync with Harvest (time tracking) and HubSpot (CRM)
-- 📋 **Export Capabilities** - Invoice-ready reports and CSV exports
-- 🎯 **Budget vs Actual Tracking** - Visual indicators for budget utilization and burn rates
+- **User**: Single account manager (Joe)
+- **Data Sources**:
+  - Weekly HubSpot CSV exports
+  - Harvest API (time tracking)
+  - Finance forecast spreadsheets
+- **Purpose**: Track account profitability and demonstrate to boss via Vercel URL
+
+## Quick Start
+
+### Weekly Workflow
+
+1. **Monday Morning**
+   - Export HubSpot data to CSV
+   - Export finance forecast to CSV
+   - Visit am-copilot.vercel.app/upload
+
+2. **Upload Data**
+   - Drag & drop CSVs
+   - Verify data loaded
+
+3. **Review Dashboard**
+   - Check profitability metrics
+   - Note any exceptions
+
+4. **Share with Boss**
+   - Send link: am-copilot.vercel.app
+   - Dashboard shows latest data
 
 ## Tech Stack
 
-### Frontend
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **UI Library**: Radix UI Themes
-- **Styling**: TailwindCSS
-- **Charts**: Recharts
-- **Icons**: Lucide React
-
-### Backend
-- **Runtime**: Node.js with Express
-- **Database**: PostgreSQL
-- **API Integrations**: 
-  - Harvest API v2 (time tracking)
-  - HubSpot API (CRM data)
-  - Microsoft Graph API (SharePoint/Teams)
-- **Error Tracking**: Sentry
-- **Testing**: Jest
-
-### Infrastructure
+- **Framework**: Next.js 14
+- **Database**: PostgreSQL (or JSON for simplicity)
 - **Hosting**: Vercel
-- **CI/CD**: GitHub Actions
-- **Code Quality**: SonarCloud
-- **Performance**: Lighthouse CI
-
-## Project Structure
-
-```
-/app              - Next.js app router pages
-  page.tsx        - Main dashboard with tabs for Overview, Profitability, Exceptions, Clients
-  layout.tsx      - Root layout with Radix UI theme
-
-/src
-  /api            - Express API routes
-    /sync         - Harvest/HubSpot sync endpoints
-    /export       - Invoice and report generation
-  /connectors     - External API integrations
-    harvest.ts    - Harvest time tracking integration
-    hubspot.ts    - HubSpot CRM integration
-    sft.ts        - SharePoint/Teams integration
-  /models         - Database models and schemas
-  /services       - Business logic
-    profitability.service.ts - Margin calculations
-    export.service.ts        - Report generation
-    mockData.ts              - Demo data for prototype
-  /rules          - Exception detection engine
-  /types          - TypeScript type definitions
-  /utils          - Utility functions
-
-/scripts          - Database setup and migrations
-/tests            - Test suites
-```
-
-## Dashboard Views
-
-### 1. Overview Tab
-- Key metrics cards (Revenue, Profit, Margin, Hours)
-- Revenue & profit trend chart (30-day view)
-- Client revenue distribution pie chart
-
-### 2. Profitability Tab
-- Detailed client profitability table
-- Budget utilization progress bars
-- Color-coded margin indicators
-- Average hourly rates per client
-
-### 3. Exceptions Tab
-- Active alerts with severity badges (High/Medium/Low)
-- Approve/Reject actions for each exception
-- Exception types: Budget breach, Rate mismatch, Unbilled hours, Low utilization
-
-### 4. Clients Tab
-- Individual client cards with key metrics
-- Quick access to client details
-- Profitability summary per client
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL database with the `pgcrypto` extension enabled (used for UUID defaults)
-- Harvest account with API access
-- HubSpot account (optional)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/17871787/Account_Manager_Tool.git
-cd Account_Manager_Tool
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your API keys and database credentials
-
-# Run database migrations
-npm run migrate
-
-# Start development server
-npm run dev
-```
-
-> Running the migration suite also applies concurrent indexes on each Harvest
-> ID column (`clients.harvest_id`, `projects.harvest_id`, `tasks.harvest_id`,
-> `people.harvest_id`) so existing databases benefit from faster lookups
-> without blocking writes.
-
-### Environment Variables
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/am_copilot
-# Optional: override default TLS verification behaviour
-# DATABASE_SSL_MODE=verify-full
-# DATABASE_SSL_CA="-----BEGIN CERTIFICATE-----\\n..."
-# DATABASE_SSL_CERT="-----BEGIN CERTIFICATE-----\\n..."
-# DATABASE_SSL_KEY="-----BEGIN PRIVATE KEY-----\\n..."
-
-# API Keys
-HARVEST_ACCESS_TOKEN=your_harvest_token
-HARVEST_ACCOUNT_ID=your_account_id
-HUBSPOT_API_KEY=your_hubspot_key
-
-# Optional
-SENTRY_DSN=your_sentry_dsn
-NEXT_PUBLIC_API_URL=http://localhost:3001
-# Harvest cache tuning (optional)
-# HARVEST_CACHE_MAX_SIZE=5000
-# HARVEST_CACHE_TTL_SECONDS=21600 # 6 hours; set to 0 to disable TTL expiration
-```
-
-### Database SSL configuration
-
-Database connections now default to full certificate verification. This matches
-the requirements for hosted platforms like Vercel + Neon/Postgres and removes
-the need to disable security in production environments.
-
-- `DATABASE_SSL_MODE` (default `verify-full`): set to `allow-invalid` to keep the
-  TLS tunnel but skip certificate verification, or `disable` to turn TLS off
-  entirely. **Only use these overrides for trusted local development setups.**
-- `DATABASE_SSL_CA`, `DATABASE_SSL_CERT`, `DATABASE_SSL_KEY`: provide PEM-encoded
-  certificate material (newline characters can be encoded as `\n`). These values
-  are applied when using `verify-full` to support managed Postgres providers that
-  require custom certificates.
+- **Auth**: Simple session-based with hardcoded fallback
 
 ## Development
 
 ```bash
-# Run frontend and backend concurrently
+# Install
+npm install
+
+# Run locally
 npm run dev
+# Open http://localhost:3000
 
-# Run tests
-npm test
-
-# Watch tests on change
-npm run test:watch
-
-# Generate coverage reports
-npm run test:coverage
-
-# Type checking
-npm run typecheck
-
-# Check for lint issues
-npm run lint
-
-# Automatically fix lint problems
-npm run lint:fix
-# Build for production
-npm run build
+# Deploy
+git push origin main
+# Vercel auto-deploys
 ```
 
-## Deployment
+## Documentation
 
-The application is configured for automatic deployment to Vercel:
+- [Weekly Workflow Guide](./WEEKLY_WORKFLOW.md) - Step-by-step Monday routine
+- [Project Status](./PROJECT_STATUS_SUMMARY.md) - Current development status
+- [Simon Willison Approach](./SIMON_WILLISON_APPROACH.md) - Alternative pragmatic architecture
+- [Claude x Codex Collaboration](./CLAUDE_CODEX_COLLABORATION.md) - How AI tools work together
 
-1. Push to `main` branch triggers production deployment
-2. Pull requests create preview deployments
-3. GitHub Actions run tests and quality checks
+## Repository
 
-## Current Status
+- **GitHub**: https://github.com/17871787/Account_Manager_Tool
+- **Production**: https://am-copilot.vercel.app
 
-✅ **Phase 1 Complete** - Core dashboard with mock data
-- Interactive profitability dashboard
-- Exception management system
-- Client portfolio view
-- Mock data integration
+---
 
-🚧 **Phase 2 In Progress** - API Integration
-- Harvest API connector improvements
-- HubSpot data synchronization
-- Real-time data updates
-
-📋 **Phase 3 Planned** - Advanced Features
-- AI-powered insights with GPT-4
-- Automated report generation
-- Predictive profitability analysis
-- Mobile responsive design
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-Proprietary - Map of Ag Internal Use Only
-
-## Support
-
-For questions or issues, contact the Map of Ag development team.
+*Personal profitability tracking tool - not enterprise software*
