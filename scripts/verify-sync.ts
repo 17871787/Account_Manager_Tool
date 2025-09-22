@@ -1,16 +1,69 @@
 import { format, subDays } from 'date-fns';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? process.env.INTERNAL_API_KEY ?? 'test-key';
+
+let sessionCookie: string | null = null;
+
+async function ensureSession(): Promise<void> {
+  if (sessionCookie) {
+    return;
+  }
+
+  const username = process.env.AUTH_USERNAME;
+  const password = process.env.AUTH_PASSWORD;
+
+  if (!username || !password) {
+    throw new Error('AUTH_USERNAME and AUTH_PASSWORD must be set to verify authentication.');
+  }
+
+  const response = await fetch(`${API_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Login failed: ${response.status} ${response.statusText} - ${body}`);
+  }
+
+  const rawHeaders =
+    typeof (response.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie ===
+    'function'
+      ? (response.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
+      : ((response.headers as unknown as { raw?: () => Record<string, string[]> }).raw?.()?.[
+          'set-cookie'
+        ] ?? []);
+
+  const headerList = Array.isArray(rawHeaders) && rawHeaders.length > 0
+    ? rawHeaders
+    : (response.headers.get('set-cookie') ? [response.headers.get('set-cookie') as string] : []);
+
+  if (headerList.length === 0) {
+    throw new Error('Login response did not include a session cookie.');
+  }
+
+  const session = headerList.find((value) => value.startsWith('session-token='));
+
+  if (!session) {
+    throw new Error('Unable to locate session cookie in login response.');
+  }
+
+  const trimmedSession = session.trim();
+  sessionCookie = trimmedSession.split(';')[0] ?? null;
+}
 
 async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  await ensureSession();
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
+      ...(sessionCookie ? { Cookie: sessionCookie } : {}),
       ...(options.headers ?? {}),
     },
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -24,7 +77,7 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
 async function verifyAuth(): Promise<void> {
   const unauth = await fetch(`${API_URL}/api/health`);
   if (unauth.status !== 401) {
-    throw new Error(`Expected 401 without key but received ${unauth.status}`);
+    throw new Error(`Expected 401 without session but received ${unauth.status}`);
   }
 
   const health = await apiRequest<{ status: string }>(`/api/health`);

@@ -1,18 +1,32 @@
 import request from 'supertest';
 import express from 'express';
+import { webcrypto } from 'crypto';
 import createApiRouter from '../routes';
 import { DEFAULT_BATCH_SIZE } from '../sync/batchInsert';
 import { setPool } from '../../models/database';
 import { Pool, PoolClient } from 'pg';
 import { createRateLimitMiddleware, requireExpressAuth } from '../../middleware/expressAuth';
-import { resetRateLimit } from '../../middleware/auth';
+import {
+  createSessionToken,
+  resetRateLimit,
+  SESSION_COOKIE_NAME,
+} from '../../middleware/auth';
 import { SyncRouterDeps } from '../sync/routes';
+
+if (!globalThis.crypto) {
+  Object.defineProperty(globalThis, 'crypto', {
+    value: webcrypto,
+    configurable: true,
+    writable: false,
+  });
+}
 
 let mockClient: jest.Mocked<PoolClient>;
 let mockPool: jest.Mocked<Pool>;
 
-const API_KEY = 'test-api-key';
-const SESSION_TOKEN = 'valid-session-token';
+const SESSION_SECRET = 'test-session-secret';
+const TEST_SUBJECT = 'test-user';
+let sessionCookieHeader: string;
 
 interface BuildAppOptions {
   deps?: SyncRouterDeps;
@@ -40,11 +54,10 @@ describe('API endpoints', () => {
   let hubspotConnector: any;
   let sftConnector: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     resetRateLimit();
-    process.env.INTERNAL_API_KEY = API_KEY;
-    process.env.VALID_SESSION_TOKEN = SESSION_TOKEN;
+    process.env.SESSION_SECRET = SESSION_SECRET;
     mockClient = {
       query: jest.fn().mockResolvedValue({ rows: [] }),
       release: jest.fn(),
@@ -85,16 +98,19 @@ describe('API endpoints', () => {
       deps: { harvestConnector, hubspotConnector, sftConnector },
       scope: 'api-primary',
     });
+
+    const session = await createSessionToken(TEST_SUBJECT);
+    sessionCookieHeader = `${SESSION_COOKIE_NAME}=${session.token}`;
   });
 
   afterEach(() => {
     connectSpy.mockRestore();
-    delete process.env.INTERNAL_API_KEY;
-    delete process.env.VALID_SESSION_TOKEN;
+    delete process.env.SESSION_SECRET;
+    sessionCookieHeader = '';
   });
 
   it('responds to health check', async () => {
-    const res = await request(app).get('/api/health').set('x-api-key', API_KEY);
+    const res = await request(app).get('/api/health').set('Cookie', sessionCookieHeader);
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
   });
@@ -102,7 +118,7 @@ describe('API endpoints', () => {
   it('syncs Harvest data', async () => {
     const res = await request(app)
       .post('/api/sync/harvest')
-      .set('x-api-key', API_KEY)
+      .set('Cookie', sessionCookieHeader)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -132,7 +148,7 @@ describe('API endpoints', () => {
 
     const res = await request(app)
       .post('/api/sync/harvest')
-      .set('x-api-key', API_KEY)
+      .set('Cookie', sessionCookieHeader)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -160,7 +176,7 @@ describe('API endpoints', () => {
   });
 
   it('syncs HubSpot data', async () => {
-    const res = await request(app).post('/api/sync/hubspot').set('x-api-key', API_KEY);
+    const res = await request(app).post('/api/sync/hubspot').set('Cookie', sessionCookieHeader);
     expect(res.status).toBe(200);
     expect(res.body.source).toBe('hubspot');
     expect(res.body.recordsProcessed).toBe(2);
@@ -169,7 +185,7 @@ describe('API endpoints', () => {
   it('syncs SFT data', async () => {
     const res = await request(app)
       .post('/api/sync/sft')
-      .set('x-api-key', API_KEY)
+      .set('Cookie', sessionCookieHeader)
       .send({ month: '2024-01' });
     expect(res.status).toBe(200);
     expect(res.body.source).toBe('sft');
@@ -181,7 +197,7 @@ describe('API endpoints', () => {
 
     const res = await request(app)
       .post('/api/sync/harvest')
-      .set('x-api-key', API_KEY)
+      .set('Cookie', sessionCookieHeader)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -202,7 +218,7 @@ describe('API endpoints', () => {
 
     const res = await request(appLocal)
       .post('/api/sync/harvest')
-      .set('x-api-key', API_KEY)
+      .set('Cookie', sessionCookieHeader)
       .send({
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString(),
@@ -228,7 +244,7 @@ describe('API endpoints', () => {
 
     const appLocal = buildApp({ scope: 'hubspot-env' });
 
-    const res = await request(appLocal).post('/api/sync/hubspot').set('x-api-key', API_KEY);
+    const res = await request(appLocal).post('/api/sync/hubspot').set('Cookie', sessionCookieHeader);
     expect(res.status).toBe(500);
     expect(res.body.error).toMatch(/HUBSPOT_API_KEY/);
 
@@ -249,7 +265,7 @@ describe('API endpoints', () => {
 
     const res = await request(appLocal)
       .post('/api/sync/sft')
-      .set('x-api-key', API_KEY)
+      .set('Cookie', sessionCookieHeader)
       .send({ month: '2024-01' });
     expect(res.status).toBe(500);
     expect(res.body.error).toMatch(/MS_TENANT_ID|MS_CLIENT_ID|MS_CLIENT_SECRET/);
@@ -280,7 +296,7 @@ describe('API endpoints', () => {
   it('allows session token authentication', async () => {
     const res = await request(app)
       .get('/api/health')
-      .set('Cookie', `session-token=${SESSION_TOKEN}`);
+      .set('Cookie', sessionCookieHeader);
     expect(res.status).toBe(200);
   });
 
@@ -292,10 +308,10 @@ describe('API endpoints', () => {
       windowMs: 60_000,
     });
 
-    const first = await request(limitedApp).get('/api/health').set('x-api-key', API_KEY);
+    const first = await request(limitedApp).get('/api/health').set('Cookie', sessionCookieHeader);
     expect(first.status).toBe(200);
 
-    const second = await request(limitedApp).get('/api/health').set('x-api-key', API_KEY);
+    const second = await request(limitedApp).get('/api/health').set('Cookie', sessionCookieHeader);
     expect(second.status).toBe(429);
     expect(second.body.error).toBe('Too Many Requests');
   });
