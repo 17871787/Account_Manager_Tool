@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dataStore } from '@/src/lib/dataStore';
+import { dataStore } from '../../../src/lib/dataStore';
 
 export async function POST(request: NextRequest) {
   try {

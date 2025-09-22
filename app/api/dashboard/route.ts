@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dataStore } from '@/src/lib/dataStore';
+import { dataStore } from '../../../src/lib/dataStore';
 
 export async function GET(request: NextRequest) {
   try {
