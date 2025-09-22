@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import { fetchWithSession } from '../src/utils/fetchWithSession';
+import { fetchWithSession } from '../../src/utils/fetchWithSession';
 
 export default function SentryExamplePage() {
   const [testType, setTestType] = useState<string>('');
