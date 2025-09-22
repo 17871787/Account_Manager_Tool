@@ -1,175 +1,140 @@
 # Project Status Summary - Account Manager Tool
 
 ## Executive Summary
-The Account Manager Tool is a profitability dashboard for dairy industry account managers. After extensive analysis and fixes, the codebase is now in a more stable state with critical issues addressed.
+Personal profitability dashboard for tracking dairy account performance. Designed for weekly data uploads (HubSpot CSV, Harvest API, Finance spreadsheets) with a Vercel-hosted dashboard for demonstrating to management.
 
-## Current Grade: B-
-Up from initial F grade through systematic improvements.
+## Current Status: Development/Proof of Concept
+Working infrastructure ready for simplified single-user workflow.
 
-## Work Completed
+## Use Case
+- **User**: Single account manager (Joe)
+- **Data Sources**:
+  - Weekly HubSpot CSV exports
+  - Harvest API (time tracking)
+  - Finance forecast spreadsheets
+- **Purpose**: Track account profitability and demonstrate to boss via Vercel URL
 
-### 1. Memory Leak Fix ✅
-- Implemented bounded LRU cache with TTL
-- Replaced OptimizedHarvestConnector with BoundedHarvestConnector
-- Added comprehensive test suite (19 tests passing)
-- **Status**: DEPLOYED and WORKING
+## Work Completed Today (Sept 22, 2025)
 
-### 2. Authentication Fix ✅
-- Fixed middleware blocking login endpoint
-- Implemented JWT authentication system
-- Unified session-based auth flow
-- **Status**: FUNCTIONAL (needs env vars configured)
+### 1. Fixed Missing API Routes ✅
+- Added `/api/profitability/portfolio/[month]`
+- Added `/api/clients`, `/api/projects`, `/api/exceptions/pending`
+- Eliminated 404 errors in production
 
-### 3. API Architecture ✅
-- Migrated critical Express routes to Next.js
-- Created unified API structure
-- Eliminated dual API conflicts
-- **Status**: SIMPLIFIED and WORKING
+### 2. Fixed Deployment Pipeline ✅
+- Vercel deployments working again
+- Manual deployment successful
+- Production URL accessible: https://am-copilot.vercel.app
 
-### 4. Build Process ✅
-- Fixed TypeScript compilation errors
-- Resolved import path issues
-- Build now succeeds with `npx next build`
-- **Status**: BUILD PASSING
+### 3. Environment Configuration ✅
+- Set AUTH_USERNAME, AUTH_PASSWORD, SESSION_SECRET in Vercel
+- Created health check endpoint to verify env vars
+- Authentication system configured (pending simplified credentials)
 
-### 5. Testing Infrastructure ✅
-- Created real integration tests
-- Added LRU cache test suite
-- Fixed test configuration
-- **Status**: 73 TESTS PASSING
+### 4. Infrastructure Status ✅
+- Build passing
+- Routes responding
+- Deployment automated via GitHub push
 
-### 6. CI/CD Pipeline ✅
-- Created working CI/CD workflow
-- Removed flaky tests
-- Focus on build and type checking
-- **Status**: READY FOR DEPLOYMENT
+## Current Architecture
 
-## Critical Findings
+### Simplified Data Flow
+```
+Weekly CSV Upload → Parse → Store → Dashboard → Share with Boss
+        ↑                      ↓
+   HubSpot Data          PostgreSQL/JSON
+   Finance Data
 
-### What Was Actually Broken
-1. Memory leak from unbounded caches
-2. Login endpoint blocked by middleware
-3. Build failures from TypeScript errors
-4. No real tests for critical functionality
-
-### What Looked Broken But Wasn't
-1. Dual API architecture (might be intentional)
-2. Singleton pattern (resets in serverless)
-3. CI failures (testing deprecated features)
-
-### What We Learned
-- Think slow before acting fast
-- Test assumptions before rewriting
-- Minimal fixes are often best
-- Understanding > Judging
-
-## Current Issues
-
-### Production 404
-- Likely missing environment variables in Vercel
-- Build succeeds locally
-- Need to check Vercel deployment logs
-
-### Required Environment Variables
-```env
-# Authentication
-AUTH_USERNAME=admin
-AUTH_PASSWORD=<secure>
-SESSION_SECRET=<32-char-random>
-JWT_SECRET=<32-char-random>
-
-# Harvest Integration
-HARVEST_ACCESS_TOKEN=<from-harvest>
-HARVEST_ACCOUNT_ID=<from-harvest>
-
-# Database
-DATABASE_URL=postgresql://...
-
-# HubSpot
-HUBSPOT_API_KEY=<from-hubspot>
+Harvest API → Direct Integration
 ```
 
-## File Structure
+### Key Files
+- `/app/api/auth/login/route.ts` - Authentication (to be simplified)
+- `/app/api/health/route.ts` - System health check
+- `/app/api/upload/*` - CSV upload endpoints (to be created)
+- `/middleware.ts` - Auth middleware
 
-### Core Implementation Files
-- `/src/utils/lru-cache.ts` - Memory-safe cache implementation
-- `/src/connectors/harvest.connector.bounded.ts` - Fixed Harvest connector
-- `/src/auth/jwt-auth.ts` - JWT authentication service
-- `/middleware.ts` - Fixed auth middleware
-- `/app/api/sync/harvest/route.ts` - Harvest sync endpoint
-- `/app/api/profitability/calculate/route.ts` - Profitability calculations
+## Next Steps for Personal Use
 
-### Test Files
-- `/src/utils/__tests__/lru-cache.test.ts` - Cache tests (19 passing)
-- `/app/api/__tests__/integration/sync.harvest.test.ts` - Integration tests
-- `/src/auth/__tests__/jwt-auth.test.ts` - Auth tests
+### Immediate (Make It Work)
+1. Hardcode simple login credentials
+2. Create CSV upload pages
+3. Test with real data
 
-### Documentation
-- `/README_CURRENT_STATE.md` - Current critical status
-- `/DOCUMENTATION_INDEX.md` - Document organization
-- `/FIRST_PRINCIPLES_ANALYSIS.md` - Systematic analysis
-- `/THINKING_SLOW_ANALYSIS.md` - Reflection on approach
-- `/FIXES_COMPLETED_SUMMARY.md` - Emergency fixes summary
+### This Week
+1. Upload page for HubSpot CSV
+2. Upload page for Finance spreadsheet
+3. Simple dashboard showing key metrics
+4. Remove unnecessary complexity
 
-## Next Steps
+### Nice to Have
+1. Automated Harvest sync
+2. Weekly email summary
+3. Trend charts
 
-### Immediate (Production Fix)
-1. Check Vercel environment variables
-2. Review deployment logs
-3. Ensure database connection
-4. Test auth flow in production
-
-### Short-term (Stabilization)
-1. Monitor memory usage in production
-2. Add error alerting
-3. Document API endpoints
-4. Create runbook for common issues
-
-### Long-term (Optimization)
-1. Add performance monitoring
-2. Implement caching strategy
-3. Optimize database queries
-4. Add comprehensive logging
-
-## Commands Reference
+## Deployment Commands
 
 ### Local Development
 ```bash
 npm install
 npm run dev
+# Open http://localhost:3000
 ```
 
-### Testing
+### Deploy to Vercel
 ```bash
-npm test                                    # Run all tests
-npm test -- src/utils/__tests__/lru-cache.test.ts  # Run specific test
+git add .
+git commit -m "Update"
+git push origin main
+# Or manual deploy:
+npx vercel --prod --yes
 ```
 
-### Building
+### Environment Variables (Vercel)
 ```bash
-npx next build  # Build Next.js app
-npx tsc --noEmit  # Type check
+# Add env var
+echo "value" | npx vercel env add VAR_NAME production
+
+# List env vars
+npx vercel env ls production
+
+# Remove env var
+npx vercel env rm VAR_NAME production --yes
 ```
 
-### Production Deployment
-```bash
-git push origin main  # Triggers Vercel deployment
-```
+## Weekly Workflow
+
+1. **Monday Morning**
+   - Export HubSpot data to CSV
+   - Export finance forecast to CSV
+   - Visit am-copilot.vercel.app/upload
+
+2. **Upload Data**
+   - Drag & drop CSVs
+   - Verify data loaded
+
+3. **Review Dashboard**
+   - Check profitability metrics
+   - Note any exceptions
+
+4. **Share with Boss**
+   - Send link: am-copilot.vercel.app
+   - Dashboard shows latest data
 
 ## Repository Information
 - **GitHub**: https://github.com/17871787/Account_Manager_Tool
-- **Production**: https://am-copilot.vercel.app (currently 404)
-- **Framework**: Next.js 14 + Express
-- **Database**: PostgreSQL
+- **Production**: https://am-copilot.vercel.app
+- **Framework**: Next.js 14
+- **Database**: PostgreSQL (or JSON files for simplicity)
 - **Hosting**: Vercel
 
-## Final Assessment
-
-The codebase has evolved from a critically broken state (Grade F) to a functional, deployable application (Grade B-). Key architectural issues have been addressed, memory leaks fixed, and testing infrastructure established.
-
-The main remaining issue is the production 404, likely caused by missing configuration rather than code problems. The local development environment works correctly, indicating the code itself is functional.
+## Notes
+- This is a personal tool, not enterprise software
+- Optimized for weekly manual updates
+- Simple authentication for demo purposes
+- Focus on working quickly vs perfect architecture
 
 ---
 
 *Last Updated: September 22, 2025*
-*Status: Ready for production deployment with proper configuration*
+*Purpose: Personal profitability tracking with boss-friendly dashboard*
