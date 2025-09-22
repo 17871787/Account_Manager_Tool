@@ -39,3 +39,5 @@ temp/
 tmp/
 *.tmp
 .vercel
+
+.vercel
