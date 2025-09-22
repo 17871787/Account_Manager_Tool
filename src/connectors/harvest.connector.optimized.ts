@@ -12,6 +12,143 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { captureException } from '../utils/sentry';
 import { query } from '../models/database';
 
+const DEFAULT_CACHE_MAX_SIZE = 5000;
+const DEFAULT_CACHE_TTL_MS = 1000 * 60 * 60 * 6; // 6 hours
+
+function parsePositiveInteger(value: string | undefined, fallback: number): number {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function parseTtlMilliseconds(value: string | undefined, fallbackMs: number): number | undefined {
+  if (value === undefined || value === '') {
+    return fallbackMs;
+  }
+
+  const parsedSeconds = Number.parseInt(value, 10);
+  if (Number.isNaN(parsedSeconds)) {
+    return fallbackMs;
+  }
+
+  if (parsedSeconds <= 0) {
+    return undefined;
+  }
+
+  return parsedSeconds * 1000;
+}
+
+const HARVEST_CACHE_MAX_SIZE = parsePositiveInteger(
+  process.env.HARVEST_CACHE_MAX_SIZE,
+  DEFAULT_CACHE_MAX_SIZE
+);
+
+const HARVEST_CACHE_TTL_MS = parseTtlMilliseconds(
+  process.env.HARVEST_CACHE_TTL_SECONDS,
+  DEFAULT_CACHE_TTL_MS
+);
+
+export class BoundedLruMap<V> extends Map<string, V | null> {
+  private readonly maxSize: number;
+  private readonly ttlMs?: number;
+  private readonly expiry = new Map<string, number>();
+
+  constructor({ maxSize, ttlMs }: { maxSize: number; ttlMs?: number }) {
+    super();
+    this.maxSize = Math.max(1, maxSize);
+    this.ttlMs = ttlMs && ttlMs > 0 ? ttlMs : undefined;
+  }
+
+  override get(key: string): V | null | undefined {
+    if (!super.has(key)) {
+      return undefined;
+    }
+
+    if (this.ttlMs) {
+      const expiresAt = this.expiry.get(key);
+      if (expiresAt && expiresAt <= Date.now()) {
+        this.delete(key);
+        return undefined;
+      }
+    }
+
+    const value = super.get(key);
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const expiresAt = this.ttlMs ? Date.now() + this.ttlMs : undefined;
+
+    // Move key to the end to reflect recent use
+    super.delete(key);
+    this.expiry.delete(key);
+    super.set(key, value);
+    if (expiresAt) {
+      this.expiry.set(key, expiresAt);
+    }
+
+    return value;
+  }
+
+  override has(key: string): boolean {
+    return this.get(key) !== undefined;
+  }
+
+  override set(key: string, value: V | null): this {
+    if (super.has(key)) {
+      super.delete(key);
+      this.expiry.delete(key);
+    }
+
+    super.set(key, value);
+    if (this.ttlMs) {
+      this.expiry.set(key, Date.now() + this.ttlMs);
+    }
+
+    this.evict();
+    return this;
+  }
+
+  override delete(key: string): boolean {
+    this.expiry.delete(key);
+    return super.delete(key);
+  }
+
+  private evict(): void {
+    this.evictExpired();
+
+    while (this.size > this.maxSize) {
+      const oldestKey = this.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      super.delete(oldestKey);
+      this.expiry.delete(oldestKey);
+    }
+  }
+
+  private evictExpired(): void {
+    if (!this.ttlMs) {
+      return;
+    }
+
+    const now = Date.now();
+    for (const [key, expiresAt] of this.expiry.entries()) {
+      if (expiresAt <= now) {
+        super.delete(key);
+        this.expiry.delete(key);
+      }
+    }
+  }
+}
+
 type IdMapping = Map<string, string | null>;
 
 interface BatchIdLookupResult {
@@ -40,10 +177,10 @@ export class OptimizedHarvestConnector {
     tasks: IdMapping;
     people: IdMapping;
   } = {
-    clients: new Map(),
-    projects: new Map(),
-    tasks: new Map(),
-    people: new Map(),
+    clients: new BoundedLruMap({ maxSize: HARVEST_CACHE_MAX_SIZE, ttlMs: HARVEST_CACHE_TTL_MS }),
+    projects: new BoundedLruMap({ maxSize: HARVEST_CACHE_MAX_SIZE, ttlMs: HARVEST_CACHE_TTL_MS }),
+    tasks: new BoundedLruMap({ maxSize: HARVEST_CACHE_MAX_SIZE, ttlMs: HARVEST_CACHE_TTL_MS }),
+    people: new BoundedLruMap({ maxSize: HARVEST_CACHE_MAX_SIZE, ttlMs: HARVEST_CACHE_TTL_MS }),
   };
 
   private currentMetrics: HarvestSyncMetrics = {

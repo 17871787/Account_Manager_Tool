@@ -57,24 +57,13 @@ Created `src/connectors/harvest.connector.optimized.ts` with batch lookups:
 - Preload cache on initialization
 - Reduces 4000 queries to 4 queries
 
-### 3. **FRONTEND SHOWS FAKE DATA**
-**Impact**: Users see mock data, not real information
+### 3. **FRONTEND SHOWS FAKE DATA** (RESOLVED)
+**Impact**: Previously users saw mock data, not real information
 
-#### The Problem:
-- Frontend imports `mockApiService` instead of real API
-- Dashboard shows hardcoded fake metrics
-- No connection between frontend and backend
-
-#### File:
-`app/page.tsx:37`
-```typescript
-import { mockApiService } from '../src/services/mockData'; // FAKE!
-```
-
-#### Fix Required:
-```typescript
-import { apiService } from '../src/services/api.service'; // REAL
-```
+#### Current Status:
+- Dashboard now imports `apiService` from `src/services/api.service`
+- Real API client is mocked in tests to keep unit coverage stable
+- Frontend and backend data flows are aligned
 
 ### 4. **ARCHITECTURAL CHAOS: Two Competing API Systems**
 **Impact**: Confusion, security holes, maintenance nightmare
@@ -101,27 +90,27 @@ Pick ONE and migrate everything:
 - Already added in schema but needs migration
 
 ### 7. **Missing Environment Variables**
-- No `.env.example` with required variables
-- `INTERNAL_API_KEY` not documented
-- `DATABASE_SSL_MODE` not documented
+- `.env.example` now documents API + security keys
+- `DATABASE_SSL_MODE` still not documented
+- Need production-ready guidance for secrets rotation
 
 ## 📋 Action Plan
 
 ### Phase 1: Security (DO NOW)
 1. ✅ Created auth middleware for Next.js routes
 2. ⬜ Apply auth to ALL Next.js API routes
-3. ⬜ Generate and document INTERNAL_API_KEY
+3. ✅ Documented INTERNAL_API_KEY in `.env.example`
 4. ⬜ Add session management
 
 ### Phase 2: Performance (DO TODAY)
 1. ✅ Created optimized Harvest connector
-2. ⬜ Deploy optimized connector to production
+2. ✅ Wired optimized connector into API router
 3. ⬜ Run database index migration
 4. ⬜ Test with 1000+ records
 
 ### Phase 3: Functionality (DO THIS WEEK)
 1. ✅ Created real API service
-2. ⬜ Replace mockApiService in frontend
+2. ✅ Replaced mockApiService in frontend
 3. ⬜ Test end-to-end flows
 4. ⬜ Remove mock data files
 
@@ -148,7 +137,7 @@ Pick ONE and migrate everything:
 ## ⚠️ DO NOT DEPLOY UNTIL:
 - [ ] All API routes have authentication
 - [ ] Harvest connector uses batch lookups
-- [ ] Frontend uses real API service
+- [x] Frontend uses real API service
 - [ ] Rate limits are reasonable (60+ req/min)
 - [ ] All tests pass with 1000+ records
 - [ ] Environment variables are documented

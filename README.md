@@ -150,6 +150,9 @@ HUBSPOT_API_KEY=your_hubspot_key
 # Optional
 SENTRY_DSN=your_sentry_dsn
 NEXT_PUBLIC_API_URL=http://localhost:3001
+# Harvest cache tuning (optional)
+# HARVEST_CACHE_MAX_SIZE=5000
+# HARVEST_CACHE_TTL_SECONDS=21600 # 6 hours; set to 0 to disable TTL expiration
 ```
 
 ### Database SSL configuration

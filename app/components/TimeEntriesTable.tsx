@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { fetchWithSession } from "../../src/utils/fetchWithSession";
 
 interface TimeEntry {
   id: number;
@@ -39,7 +40,9 @@ export function TimeEntriesTable() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTimeEntries = async () => {
+  const fetchTimeEntries = async (requestedPage?: number) => {
+    const pageToFetch = requestedPage ?? page;
+
     if (!from || !to) {
       setError("Please select both from and to dates");
       return;
@@ -49,9 +52,9 @@ export function TimeEntriesTable() {
     setError(null);
 
     try {
-      const url = `/api/harvest/time-entries?from=${from}&to=${to}&page=${page}`;
+      const url = `/api/harvest/time-entries?from=${from}&to=${to}&page=${pageToFetch}`;
 
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await fetchWithSession(url, { cache: "no-store" });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -61,6 +64,7 @@ export function TimeEntriesTable() {
 
       const result = await response.json();
       setData(result);
+      setPage(result.page ?? pageToFetch);
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : "Failed to fetch time entries");
@@ -71,7 +75,7 @@ export function TimeEntriesTable() {
 
   // Auto-fetch on component mount
   useEffect(() => {
-    fetchTimeEntries();
+    fetchTimeEntries(1);
   }, []);
 
   return (
@@ -106,7 +110,10 @@ export function TimeEntriesTable() {
         </div>
         <div className="flex items-end">
           <button
-            onClick={fetchTimeEntries}
+            onClick={() => {
+              setPage(1);
+              fetchTimeEntries(1);
+            }}
             disabled={loading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
           >
@@ -160,8 +167,9 @@ export function TimeEntriesTable() {
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  setPage(page - 1);
-                  setTimeout(fetchTimeEntries, 0);
+                  const previousPage = Math.max(1, page - 1);
+                  setPage(previousPage);
+                  fetchTimeEntries(previousPage);
                 }}
                 disabled={page <= 1 || loading}
                 className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
@@ -170,8 +178,9 @@ export function TimeEntriesTable() {
               </button>
               <button
                 onClick={() => {
-                  setPage(page + 1);
-                  setTimeout(fetchTimeEntries, 0);
+                  const nextPage = Math.min(data.total_pages, page + 1);
+                  setPage(nextPage);
+                  fetchTimeEntries(nextPage);
                 }}
                 disabled={page >= data.total_pages || loading}
                 className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"

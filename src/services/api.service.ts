@@ -3,9 +3,10 @@
  * This service connects to actual backend endpoints with proper authentication
  */
 
+import { fetchWithSession } from '../utils/fetchWithSession';
+
 interface ApiConfig {
   baseUrl?: string;
-  apiKey?: string;
   headers?: Record<string, string>;
 }
 
@@ -19,12 +20,6 @@ class ApiService {
       'Content-Type': 'application/json',
       ...config.headers,
     };
-
-    // Add API key if provided
-    const apiKey = config.apiKey || process.env.NEXT_PUBLIC_API_KEY;
-    if (apiKey) {
-      this.headers['x-api-key'] = apiKey;
-    }
   }
 
   private async request<T>(
@@ -34,8 +29,9 @@ class ApiService {
     const url = `${this.baseUrl}${endpoint}`;
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithSession(url, {
         ...options,
+        credentials: options.credentials ?? 'include',
         headers: {
           ...this.headers,
           ...options.headers,

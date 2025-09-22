@@ -1,67 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  requireAuth,
+  SESSION_COOKIE_NAME,
+  verifySessionToken,
+} from '../../../src/middleware/auth';
 
-/**
- * Authentication middleware for Next.js API routes
- * Checks for API key or session authentication
- */
 export async function withAuth(
   req: NextRequest,
   handler: (req: NextRequest) => Promise<NextResponse>
 ): Promise<NextResponse> {
-  // Check for API key authentication
-  const apiKey = req.headers.get('x-api-key');
-  const expectedApiKey = process.env.INTERNAL_API_KEY;
-
-  if (expectedApiKey && apiKey === expectedApiKey) {
-    // API key is valid, proceed with request
-    return handler(req);
+  const authError = await requireAuth(req);
+  if (authError) {
+    return authError;
   }
 
-  // Check for session authentication (if using NextAuth or similar)
-  const sessionToken = req.cookies.get('session-token')?.value;
-  if (sessionToken) {
-    // In production, validate the session token against your auth provider
-    // For now, we'll check if it matches an environment variable
-    const validSessionToken = process.env.VALID_SESSION_TOKEN;
-    if (validSessionToken && sessionToken === validSessionToken) {
-      return handler(req);
-    }
-  }
-
-  // No valid authentication found
-  return NextResponse.json(
-    { error: 'Unauthorized - API key or session required' },
-    { status: 401 }
-  );
+  return handler(req);
 }
 
-/**
- * Helper to create an authenticated route handler
- */
 export function createAuthenticatedHandler<T extends any[], R>(
   handler: (...args: T) => Promise<R>
 ) {
   return async (...args: T): Promise<R | NextResponse> => {
     const req = args[0] as NextRequest;
+    const sessionToken = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const payload = await verifySessionToken(sessionToken);
 
-    // Check authentication
-    const apiKey = req.headers.get('x-api-key');
-    const expectedApiKey = process.env.INTERNAL_API_KEY;
-
-    if (!expectedApiKey || apiKey !== expectedApiKey) {
-      // Check session as fallback
-      const sessionToken = req.cookies.get('session-token')?.value;
-      const validSessionToken = process.env.VALID_SESSION_TOKEN;
-
-      if (!validSessionToken || sessionToken !== validSessionToken) {
-        return NextResponse.json(
-          { error: 'Unauthorized - API key or session required' },
-          { status: 401 }
-        ) as R;
-      }
+    if (!payload) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Valid session required' },
+        { status: 401 }
+      ) as R;
     }
 
-    // Authentication successful, call the handler
     return handler(...args);
   };
 }

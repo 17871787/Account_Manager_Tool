@@ -24,23 +24,52 @@ jest.mock('recharts', () => {
   };
 });
 
-// Mock the mockApiService
-jest.mock('../../src/services/mockData', () => ({
-  mockApiService: {
-    getMetrics: jest.fn().mockResolvedValue({
-      revenue: 250000,
-      profit: 85000,
-      margin: 34,
-      utilizationRate: 78,
-      outstandingInvoices: 45000,
-      projectsAtRisk: 3
+// Mock the real API service used by the dashboard
+jest.mock('../../src/services/api.service', () => ({
+  apiService: {
+    getPortfolioProfitability: jest.fn().mockResolvedValue([
+      {
+        client: 'Client A',
+        project: 'Project Alpha',
+        recognisedRevenue: 120000,
+        billableCost: 75000,
+        exclusionCost: 5000,
+        margin: 40000,
+        marginPercentage: 33.3,
+        exceptionsCount: 2,
+      },
+    ]),
+    getPendingExceptions: jest.fn().mockResolvedValue([
+      {
+        id: 'ex-1',
+        type: 'billing_issue',
+        severity: 'medium',
+        description: 'Billing discrepancy detected',
+        suggestedAction: 'Review billing entries',
+        entityLabel: 'Project Alpha',
+      },
+    ]),
+    getHarvestTimeEntries: jest.fn().mockResolvedValue({
+      time_entries: [
+        {
+          spent_date: '2024-05-01',
+          hours: 6,
+          billable: true,
+          billable_rate: 150,
+          cost_rate: 80,
+        },
+        {
+          spent_date: '2024-05-02',
+          hours: 4,
+          billable: false,
+          billable_rate: 150,
+          cost_rate: 80,
+        },
+      ],
     }),
-    getProfitabilityTrends: jest.fn().mockResolvedValue([]),
-    getClientPerformance: jest.fn().mockResolvedValue([]),
-    getProjectsHealth: jest.fn().mockResolvedValue([]),
-    getTaskBreakdown: jest.fn().mockResolvedValue([]),
-    getRecentExceptions: jest.fn().mockResolvedValue([]),
-  }
+    syncHarvest: jest.fn().mockResolvedValue({ status: 'queued' }),
+    syncHubSpot: jest.fn().mockResolvedValue({ status: 'queued' }),
+  },
 }));
 
 describe('Dashboard Page', () => {
