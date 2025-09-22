@@ -365,6 +365,13 @@ export class BoundedHarvestConnector {
   }
 
   /**
+   * Get last sync metrics (alias for compatibility)
+   */
+  getLastSyncMetrics(): HarvestSyncMetrics | null {
+    return this.lastMetrics;
+  }
+
+  /**
    * Clear all caches (for testing or memory pressure)
    */
   clearCaches(): void {
@@ -373,6 +380,16 @@ export class BoundedHarvestConnector {
     this.globalIdCache.tasks.clear();
     this.globalIdCache.people.clear();
     console.log('[HarvestConnector] All caches cleared');
+  }
+
+  /**
+   * Preload cache with recent data (stub for compatibility)
+   * BoundedHarvestConnector uses LRU so no preload needed
+   */
+  async preloadCache(): Promise<void> {
+    console.log('[BoundedHarvestConnector] Using LRU cache - no preload needed');
+    // LRU cache self-manages, no preloading required
+    return Promise.resolve();
   }
 
   // Keep other methods from original...

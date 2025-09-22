@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { OptimizedHarvestConnector } from '../../connectors/harvest.connector.optimized';
+import { BoundedHarvestConnector } from '../../connectors/harvest.connector.bounded';
 import { SFTConnector } from '../../connectors/sft.connector';
 import { HubSpotConnector } from '../../connectors/hubspot.connector';
 import { getClient } from '../../models/database';
@@ -24,9 +24,9 @@ const SYNC_RATE_LIMIT = readIntEnv('SYNC_RATE_LIMIT', 60);
 const SYNC_RATE_WINDOW_MS = readIntEnv('SYNC_RATE_WINDOW_MS', 60_000);
 
 // Create singleton instance for maximum cache efficiency
-let harvestConnectorInstance: OptimizedHarvestConnector | null = null;
+let harvestConnectorInstance: BoundedHarvestConnector | null = null;
 
-async function getHarvestConnector(): Promise<OptimizedHarvestConnector> {
+async function getHarvestConnector(): Promise<BoundedHarvestConnector> {
   if (!harvestConnectorInstance) {
     const required = ['HARVEST_ACCESS_TOKEN', 'HARVEST_ACCOUNT_ID'];
     const missing = required.filter((v) => !process.env[v]);
@@ -34,7 +34,7 @@ async function getHarvestConnector(): Promise<OptimizedHarvestConnector> {
       throw new Error(`Missing environment variables: ${missing.join(', ')}`);
     }
 
-    harvestConnectorInstance = new OptimizedHarvestConnector();
+    harvestConnectorInstance = new BoundedHarvestConnector();
     // Preload cache on first initialization
     await harvestConnectorInstance.preloadCache();
     console.log('Harvest connector initialized with preloaded cache');
@@ -42,8 +42,8 @@ async function getHarvestConnector(): Promise<OptimizedHarvestConnector> {
   return harvestConnectorInstance;
 }
 
-type HarvestConnectorLike = Pick<OptimizedHarvestConnector, 'getTimeEntries'> & {
-  getLastSyncMetrics?: () => ReturnType<OptimizedHarvestConnector['getLastSyncMetrics']> | null;
+type HarvestConnectorLike = Pick<BoundedHarvestConnector, 'getTimeEntries'> & {
+  getLastSyncMetrics?: () => ReturnType<BoundedHarvestConnector['getLastSyncMetrics']> | null;
 };
 
 export interface SyncRouterDeps {
