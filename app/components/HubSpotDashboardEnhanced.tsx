@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Upload } from "lucide-react";
+import { fetchWithSession } from "../../src/utils/fetchWithSession";
 
 interface Contact {
   id: string;
@@ -57,7 +58,7 @@ export function HubSpotDashboardEnhanced() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/hubspot/contacts?limit=50");
+      const response = await fetchWithSession("/api/hubspot/contacts?limit=50");
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
@@ -77,7 +78,7 @@ export function HubSpotDashboardEnhanced() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/hubspot/companies?limit=50");
+      const response = await fetchWithSession("/api/hubspot/companies?limit=50");
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
@@ -100,11 +101,11 @@ export function HubSpotDashboardEnhanced() {
 
     try {
       // First try the HubSpot API
-      const response = await fetch("/api/hubspot/deals?limit=50");
+      const response = await fetchWithSession("/api/hubspot/deals?limit=50");
       if (!response.ok) {
         // If API fails, try to get uploaded deals
         console.warn("HubSpot API failed, checking for uploaded deals...");
-        const uploadResponse = await fetch("/api/hubspot/upload");
+        const uploadResponse = await fetchWithSession("/api/hubspot/upload");
         if (uploadResponse.ok) {
           const uploadData = await uploadResponse.json();
           if (uploadData.success && uploadData.deals.length > 0) {

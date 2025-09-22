@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { fetchWithSession } from "../../src/utils/fetchWithSession";
 
 interface TimeEntry {
   id: number;
@@ -51,7 +52,7 @@ export function TimeEntriesTable() {
     try {
       const url = `/api/harvest/time-entries?from=${from}&to=${to}&page=${page}`;
 
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await fetchWithSession(url, { cache: "no-store" });
 
       if (!response.ok) {
         const errorText = await response.text();

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Upload, FileText, Trash2, RefreshCw, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { fetchWithSession } from '../../src/utils/fetchWithSession';
 
 interface Deal {
   id?: string;
@@ -30,7 +31,7 @@ export default function DealsUploader() {
   const fetchDeals = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/hubspot/upload');
+      const response = await fetchWithSession('/api/hubspot/upload');
       const data = await response.json();
       if (data.success) {
         setDeals(data.deals || []);
@@ -84,7 +85,7 @@ export default function DealsUploader() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/hubspot/upload', {
+      const response = await fetchWithSession('/api/hubspot/upload', {
         method: 'POST',
         body: formData,
       });
@@ -112,7 +113,7 @@ export default function DealsUploader() {
     if (!confirm('Are you sure you want to clear all imported deals?')) return;
 
     try {
-      const response = await fetch('/api/hubspot/upload', {
+      const response = await fetchWithSession('/api/hubspot/upload', {
         method: 'DELETE',
       });
 

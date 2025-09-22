@@ -3,6 +3,8 @@
  * This service connects to actual backend endpoints with proper authentication
  */
 
+import { fetchWithSession } from '../utils/fetchWithSession';
+
 interface ApiConfig {
   baseUrl?: string;
   headers?: Record<string, string>;
@@ -27,7 +29,7 @@ class ApiService {
     const url = `${this.baseUrl}${endpoint}`;
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithSession(url, {
         ...options,
         credentials: options.credentials ?? 'include',
         headers: {

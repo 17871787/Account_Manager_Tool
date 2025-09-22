@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, Flex, Text, Button } from '@radix-ui/themes';
 import Link from 'next/link';
 import { Clock, Calendar, TrendingUp } from 'lucide-react';
+import { fetchWithSession } from '../../src/utils/fetchWithSession';
 
 interface TimeEntrySummary {
   totalHours: number;
@@ -31,7 +32,7 @@ export function HarvestSummary() {
       const from = startOfWeek.toISOString().split('T')[0];
       const to = endOfWeek.toISOString().split('T')[0];
 
-      const response = await fetch(`/api/harvest/time-entries?from=${from}&to=${to}`);
+      const response = await fetchWithSession(`/api/harvest/time-entries?from=${from}&to=${to}`);
       
       if (response.ok) {
         const data = await response.json();
